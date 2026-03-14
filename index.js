@@ -34,7 +34,10 @@ client.once(Events.ClientReady, async (readyClient) => {
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
     await rest.put(
-      Routes.applicationCommands(readyClient.user.id),
+      Routes.applicationGuildCommands(
+      readyClient.user.id,
+      "1385346339214462986"
+  ),
       { body: commands }
     );
 
