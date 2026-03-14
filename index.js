@@ -1,18 +1,43 @@
 require("dotenv").config();
 
-const { Client, GatewayIntentBits, Events } = require("discord.js");
+const {
+  Client,
+  GatewayIntentBits,
+  Events,
+  REST,
+  Routes,
+  SlashCommandBuilder
+} = require("discord.js");
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.GuildMembers
   ]
 });
 
-client.once(Events.ClientReady, (readyClient) => {
+const commands = [
+  new SlashCommandBuilder()
+    .setName("equipage")
+    .setDescription("Affiche le nombre de membres du serveur")
+    .toJSON()
+];
+
+client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Bot connecté : ${readyClient.user.tag}`);
+
+  try {
+    const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+
+    await rest.put(
+      Routes.applicationCommands(readyClient.user.id),
+      { body: commands }
+    );
+
+    console.log("Commande /equipage enregistrée.");
+  } catch (error) {
+    console.error("Erreur lors de l’enregistrement des commandes slash :", error);
+  }
 });
 
 client.on(Events.GuildMemberAdd, async (member) => {
@@ -29,13 +54,13 @@ client.on(Events.GuildMemberAdd, async (member) => {
   }
 });
 
-client.on(Events.MessageCreate, async (message) => {
-  if (message.author.bot) return;
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-  if (message.content === "!equipage") {
-    const memberCount = message.guild.memberCount;
+  if (interaction.commandName === "equipage") {
+    const memberCount = interaction.guild.memberCount;
 
-    message.channel.send(
+    await interaction.reply(
       `🏴‍☠️ L'équipage compte actuellement **${memberCount} pirates** à bord !`
     );
   }
