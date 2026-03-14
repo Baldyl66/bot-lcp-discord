@@ -44,6 +44,8 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
 });
 
+// --- Événement déclenché lorsqu'un nouveau membre rejoint le serveur
+
 client.on(Events.GuildMemberAdd, async (member) => {
   try {
     const username = member.user.username;
