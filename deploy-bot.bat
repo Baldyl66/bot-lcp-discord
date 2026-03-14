@@ -9,7 +9,7 @@ git commit -m "%msg%"
 git push
 
 echo.
-ssh -i C:\Users\dylan\Desktop\bot-lcp-discord\ssh-key-2026-03-14.key ubuntu@89.168.60.237 "cd ~/bot-lcp-discord && git pull && pm2 restart lcp-bot"
+ssh -i C:\Users\dylan\Desktop\bot-lcp-discord\ssh-key-2026-03-14.key ubuntu@89.168.60.237 "cd ~/bot-lcp-discord && git pull && npm install && pm2 restart lcp-bot"
 
 echo.
 echo Deploiement termine.

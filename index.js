@@ -101,6 +101,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     );
   }
 
+  //-- Commande /avatar : Affiche l'avatar d'un membre ou de l'utilisateur qui a utilisé la commande
+  
   if (interaction.commandName === "avatar") {
     const user = interaction.options.getUser("utilisateur") || interaction.user;
 
@@ -113,6 +115,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       content: `🖼️ Avatar de **${user.username}** :\n${avatarURL}`
     });
   }
+
+  // --- Commande /meme : Récupère un meme aléatoire depuis l'API et l'envoie dans le chat
 
   if (interaction.commandName === "meme") {
     try {
