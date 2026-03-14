@@ -9,6 +9,8 @@ const {
   SlashCommandBuilder
 } = require("discord.js");
 
+//--- Initialisation du client Discord avec les intents nécessaires
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
