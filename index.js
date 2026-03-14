@@ -34,14 +34,19 @@ client.once(Events.ClientReady, async (readyClient) => {
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
     await rest.put(
+      Routes.applicationCommands(readyClient.user.id),
+      { body: [] }
+    );
+
+    await rest.put(
       Routes.applicationGuildCommands(
-      readyClient.user.id,
-      "1385346339214462986"
-  ),
+        readyClient.user.id,
+        "1385346339214462986"
+      ),
       { body: commands }
     );
 
-    console.log("Commande /equipage enregistrée.");
+    console.log("Commande /equipage enregistrée sur le serveur.");
   } catch (error) {
     console.error("Erreur lors de l’enregistrement des commandes slash :", error);
   }
