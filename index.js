@@ -16,6 +16,8 @@ const client = new Client({
   ]
 });
 
+//--- Commande slash pour afficher le nombre de membres du serveur
+
 const commands = [
   new SlashCommandBuilder()
     .setName("equipage")
