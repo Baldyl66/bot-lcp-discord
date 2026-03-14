@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const axios = require("axios");
+
 const {
   Client,
   GatewayIntentBits,
@@ -9,7 +11,7 @@ const {
   SlashCommandBuilder
 } = require("discord.js");
 
-//--- Initialisation du client Discord avec les intents nécessaires
+// --- Initialisation du client Discord avec les intents nécessaires
 
 const client = new Client({
   intents: [
@@ -18,7 +20,7 @@ const client = new Client({
   ]
 });
 
-//--- Commandes slash
+// --- Commandes slash
 
 const commands = [
   new SlashCommandBuilder()
@@ -35,8 +37,15 @@ const commands = [
         .setDescription("Le membre dont tu veux voir l'avatar")
         .setRequired(false)
     )
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("meme")
+    .setDescription("Envoie un meme aléatoire")
     .toJSON()
 ];
+
+// --- Quand le bot est prêt
 
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`Bot connecté : ${readyClient.user.tag}`);
@@ -57,7 +66,7 @@ client.once(Events.ClientReady, async (readyClient) => {
       { body: commands }
     );
 
-    console.log("Commandes /equipage et /avatar enregistrées sur le serveur.");
+    console.log("Commandes /equipage, /avatar et /meme enregistrées sur le serveur.");
   } catch (error) {
     console.error("Erreur lors de l’enregistrement des commandes slash :", error);
   }
@@ -78,6 +87,8 @@ client.on(Events.GuildMemberAdd, async (member) => {
     console.error("Erreur lors du renommage :", error);
   }
 });
+
+// --- Gestion des commandes slash
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
@@ -101,6 +112,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await interaction.reply({
       content: `🖼️ Avatar de **${user.username}** :\n${avatarURL}`
     });
+  }
+
+  if (interaction.commandName === "meme") {
+    try {
+      const response = await axios.get("https://meme-api.com/gimme");
+      const meme = response.data;
+
+      await interaction.reply({
+        content: `**${meme.title}**\n📍 r/${meme.subreddit}`,
+        files: [meme.url]
+      });
+    } catch (error) {
+      console.error("Erreur lors de la récupération du meme :", error);
+      await interaction.reply("❌ Impossible de récupérer un meme pour le moment.");
+    }
   }
 });
 
