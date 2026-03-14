@@ -18,12 +18,23 @@ const client = new Client({
   ]
 });
 
-//--- Commande slash pour afficher le nombre de membres du serveur
+//--- Commandes slash
 
 const commands = [
   new SlashCommandBuilder()
     .setName("equipage")
     .setDescription("Affiche le nombre de membres du serveur")
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("avatar")
+    .setDescription("Affiche l'avatar d'un membre")
+    .addUserOption(option =>
+      option
+        .setName("utilisateur")
+        .setDescription("Le membre dont tu veux voir l'avatar")
+        .setRequired(false)
+    )
     .toJSON()
 ];
 
@@ -46,7 +57,7 @@ client.once(Events.ClientReady, async (readyClient) => {
       { body: commands }
     );
 
-    console.log("Commande /equipage enregistrée sur le serveur.");
+    console.log("Commandes /equipage et /avatar enregistrées sur le serveur.");
   } catch (error) {
     console.error("Erreur lors de l’enregistrement des commandes slash :", error);
   }
@@ -77,6 +88,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await interaction.reply(
       `🏴‍☠️ L'équipage compte actuellement **${memberCount} pirates** à bord !`
     );
+  }
+
+  if (interaction.commandName === "avatar") {
+    const user = interaction.options.getUser("utilisateur") || interaction.user;
+
+    const avatarURL = user.displayAvatarURL({
+      size: 1024,
+      extension: "png"
+    });
+
+    await interaction.reply({
+      content: `🖼️ Avatar de **${user.username}** :\n${avatarURL}`
+    });
   }
 });
 
