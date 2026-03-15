@@ -25,13 +25,11 @@ async function buildWelcomeCard(user) {
     user.displayAvatarURL({ extension: "png", size: 512 })
   );
 
-  // Zone photo mieux ajustée au poster
- const avatarWidth = 200;
- const avatarHeight = 215; 
- const avatarX = 485 - avatarWidth / 2;
- const avatarY = 205;
+  const avatarWidth = 190;
+  const avatarHeight = 205;
+  const avatarX = 512 - avatarWidth / 2;
+  const avatarY = 210;
 
-  // Ombre légère
   ctx.shadowColor = "rgba(0,0,0,0.20)";
   ctx.shadowBlur = 10;
   ctx.shadowOffsetX = 0;
@@ -39,7 +37,6 @@ async function buildWelcomeCard(user) {
 
   ctx.drawImage(avatar, avatarX, avatarY, avatarWidth, avatarHeight);
 
-  // Bordure plus fine
   ctx.shadowColor = "transparent";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0;
@@ -49,11 +46,10 @@ async function buildWelcomeCard(user) {
   ctx.lineWidth = 5;
   ctx.strokeRect(avatarX, avatarY, avatarWidth, avatarHeight);
 
-  // Pseudo plus bas
   drawCenteredText(
     ctx,
     user.username,
-    canvas.width / 2,
+    512,
     490,
     360,
     46,
