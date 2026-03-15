@@ -39,10 +39,20 @@ const commands = [
     )
     .toJSON(),
 
-  new SlashCommandBuilder()
-    .setName("meme")
-    .setDescription("Envoie un meme aléatoire")
-    .toJSON()
+ new SlashCommandBuilder()
+  .setName("meme")
+  .setDescription("Envoie un meme")
+  .addStringOption(option =>
+    option
+      .setName("type")
+      .setDescription("Choisis le type de meme")
+      .setRequired(true)
+      .addChoices(
+        { name: "🇫🇷 Français", value: "fr" },
+        { name: "🌍 International", value: "int" }
+      )
+  )
+  .toJSON()
 ];
 
 // --- Quand le bot est prêt
@@ -119,19 +129,38 @@ client.on(Events.InteractionCreate, async (interaction) => {
   // --- Commande /meme : Récupère un meme aléatoire depuis l'API et l'envoie dans le chat
 
   if (interaction.commandName === "meme") {
-    try {
-      const response = await axios.get("https://meme-api.com/gimme");
-      const meme = response.data;
+  try {
 
-      await interaction.reply({
-        content: `**${meme.title}**\n📍 r/${meme.subreddit}`,
-        files: [meme.url]
-      });
-    } catch (error) {
-      console.error("Erreur lors de la récupération du meme :", error);
-      await interaction.reply("❌ Impossible de récupérer un meme pour le moment.");
+    const type = interaction.options.getString("type");
+
+    let url;
+
+    if (type === "fr") {
+
+      const subreddits = ["rance", "memesfr", "dinosaure"];
+      const randomSub = subreddits[Math.floor(Math.random() * subreddits.length)];
+
+      url = `https://meme-api.com/gimme/${randomSub}`;
+
+    } else {
+
+      url = "https://meme-api.com/gimme";
+
     }
+
+    const response = await axios.get(url);
+    const meme = response.data;
+
+    await interaction.reply({
+      content: `**${meme.title}**\n📍 r/${meme.subreddit}\n🌐 Type : ${type === "fr" ? "Français" : "International"}`,
+      files: [meme.url]
+    });
+
+  } catch (error) {
+    console.error("Erreur lors de la récupération du meme :", error);
+    await interaction.reply("❌ Impossible de récupérer un meme.");
   }
+}
 });
 
 client.login(process.env.DISCORD_TOKEN);
