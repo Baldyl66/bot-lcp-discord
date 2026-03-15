@@ -26,10 +26,10 @@ async function buildWelcomeCard(user) {
   );
 
   // Zone photo mieux ajustée au poster
-  const avatarWidth = 220;
-  const avatarHeight = 235;
-  const avatarX = 512 - avatarWidth / 2;
-  const avatarY = 180;
+ const avatarWidth = 200;
+ const avatarHeight = 215;
+ const avatarX = 512 - avatarWidth / 2;
+ const avatarY = 205;
 
   // Ombre légère
   ctx.shadowColor = "rgba(0,0,0,0.20)";
