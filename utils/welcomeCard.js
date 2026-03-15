@@ -27,8 +27,8 @@ async function buildWelcomeCard(user) {
 
   // Zone photo mieux ajustée au poster
  const avatarWidth = 200;
- const avatarHeight = 215;
- const avatarX = 512 - avatarWidth / 2;
+ const avatarHeight = 215; 
+ const avatarX = 485 - avatarWidth / 2;
  const avatarY = 205;
 
   // Ombre légère
