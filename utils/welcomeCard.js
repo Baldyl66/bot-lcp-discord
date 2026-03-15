@@ -25,10 +25,10 @@ async function buildWelcomeCard(user) {
     user.displayAvatarURL({ extension: "png", size: 512 })
   );
 
-  const avatarWidth = 190;
-  const avatarHeight = 205;
-  const avatarX = 512 - avatarWidth / 2;
-  const avatarY = 210;
+  const avatarWidth = 205;
+  const avatarHeight = 220;
+  const avatarX = 525 - avatarWidth / 2;
+  const avatarY = 205;
 
   ctx.shadowColor = "rgba(0,0,0,0.20)";
   ctx.shadowBlur = 10;
@@ -49,7 +49,7 @@ async function buildWelcomeCard(user) {
   drawCenteredText(
     ctx,
     user.username,
-    512,
+    525,
     490,
     360,
     46,
