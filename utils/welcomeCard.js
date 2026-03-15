@@ -1,8 +1,20 @@
 const { createCanvas, loadImage } = require("canvas");
 const { AttachmentBuilder } = require("discord.js");
 
-async function buildWelcomeCard(user) {
+function drawCenteredText(ctx, text, x, y, maxWidth, startFontSize, color, fontFamily = "Serif") {
+  let fontSize = startFontSize;
 
+  do {
+    ctx.font = `bold ${fontSize}px ${fontFamily}`;
+    fontSize--;
+  } while (ctx.measureText(text).width > maxWidth && fontSize > 18);
+
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.fillText(text, x, y);
+}
+
+async function buildWelcomeCard(user) {
   const canvas = createCanvas(1024, 576);
   const ctx = canvas.getContext("2d");
 
@@ -13,24 +25,40 @@ async function buildWelcomeCard(user) {
     user.displayAvatarURL({ extension: "png", size: 512 })
   );
 
-  const avatarSize = 220;
-  const avatarX = canvas.width / 2 - avatarSize / 2;
-  const avatarY = 150;
+  // Zone photo mieux ajustée au poster
+  const avatarWidth = 220;
+  const avatarHeight = 235;
+  const avatarX = 512 - avatarWidth / 2;
+  const avatarY = 180;
 
-  ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
+  // Ombre légère
+  ctx.shadowColor = "rgba(0,0,0,0.20)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 4;
 
-  ctx.strokeStyle = "#3b2b1a";
-  ctx.lineWidth = 10;
-  ctx.strokeRect(avatarX, avatarY, avatarSize, avatarSize);
+  ctx.drawImage(avatar, avatarX, avatarY, avatarWidth, avatarHeight);
 
-  ctx.font = "bold 50px Serif";
-  ctx.fillStyle = "#3b2b1a";
-  ctx.textAlign = "center";
+  // Bordure plus fine
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
 
-  ctx.fillText(
+  ctx.strokeStyle = "#4a3422";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(avatarX, avatarY, avatarWidth, avatarHeight);
+
+  // Pseudo plus bas
+  drawCenteredText(
+    ctx,
     user.username,
     canvas.width / 2,
-    avatarY + avatarSize + 80
+    490,
+    360,
+    46,
+    "#4a3422",
+    "Serif"
   );
 
   return new AttachmentBuilder(canvas.toBuffer("image/png"), {
