@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 const { ALLOWED_ROLE_IDS } = require("../config");
 const { buildWelcomeCard } = require("../utils/welcomeCard");
 
@@ -11,6 +11,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("bienvenue")
     .setDescription("Génère une carte de bienvenue")
+    .setDefaultMemberPermissions("0")
     .addUserOption(option =>
       option
         .setName("utilisateur")

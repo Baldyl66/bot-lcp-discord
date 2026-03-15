@@ -49,11 +49,17 @@ client.once(Events.ClientReady, async readyClient => {
 
     console.log("Commandes enregistrées sur le serveur.");
 
+    console.log("Commandes enregistrées :", registeredCommands.map(c => c.name));
+
     const bienvenueCommand = Array.isArray(registeredCommands)
       ? registeredCommands.find(command => command.name === "bienvenue")
       : null;
 
+    console.log("Commande bienvenue trouvée :", bienvenueCommand);
+    console.log("ALLOWED_ROLE_IDS :", ALLOWED_ROLE_IDS);
+
     const allowedRoleIds = [...new Set(ALLOWED_ROLE_IDS.filter(Boolean))];
+    console.log("Rôles à autoriser :", allowedRoleIds);
 
     if (!bienvenueCommand || allowedRoleIds.length === 0) {
       console.warn("Permissions /bienvenue non appliquées (commande ou rôles introuvables).");
@@ -74,7 +80,9 @@ client.once(Events.ClientReady, async readyClient => {
       }))
     ];
 
-    await rest.put(
+    console.log("Permissions à appliquer :", JSON.stringify(permissions, null, 2));
+
+    const permResponse = await rest.put(
       Routes.applicationCommandPermissions(
         readyClient.user.id,
         GUILD_ID,
@@ -83,6 +91,7 @@ client.once(Events.ClientReady, async readyClient => {
       { body: { permissions } }
     );
 
+    console.log("Réponse permissions Discord :", permResponse);
     console.log("Permissions /bienvenue appliquées aux rôles autorisés.");
   } catch (error) {
     console.error("Erreur lors de l’enregistrement des commandes slash :", error);
