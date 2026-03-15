@@ -8,10 +8,11 @@ const {
   GatewayIntentBits,
   Events,
   REST,
-  Routes
+  Routes,
+  ApplicationCommandPermissionType
 } = require("discord.js");
 
-const { GUILD_ID, WELCOME_CHANNEL_ID } = require("./config");
+const { GUILD_ID, WELCOME_CHANNEL_ID, ALLOWED_ROLE_IDS } = require("./config");
 const { buildWelcomeCard } = require("./utils/welcomeCard");
 
 const client = new Client({
@@ -41,12 +42,48 @@ client.once(Events.ClientReady, async readyClient => {
   try {
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
-    await rest.put(
+    const registeredCommands = await rest.put(
       Routes.applicationGuildCommands(readyClient.user.id, GUILD_ID),
       { body: commands }
     );
 
     console.log("Commandes enregistrées sur le serveur.");
+
+    const bienvenueCommand = Array.isArray(registeredCommands)
+      ? registeredCommands.find(command => command.name === "bienvenue")
+      : null;
+
+    const allowedRoleIds = [...new Set(ALLOWED_ROLE_IDS.filter(Boolean))];
+
+    if (!bienvenueCommand || allowedRoleIds.length === 0) {
+      console.warn("Permissions /bienvenue non appliquées (commande ou rôles introuvables).");
+      return;
+    }
+
+    // L'ID du serveur correspond aussi au rôle @everyone.
+    const permissions = [
+      {
+        id: GUILD_ID,
+        type: ApplicationCommandPermissionType.Role,
+        permission: false
+      },
+      ...allowedRoleIds.map(roleId => ({
+        id: roleId,
+        type: ApplicationCommandPermissionType.Role,
+        permission: true
+      }))
+    ];
+
+    await rest.put(
+      Routes.applicationCommandPermissions(
+        readyClient.user.id,
+        GUILD_ID,
+        bienvenueCommand.id
+      ),
+      { body: { permissions } }
+    );
+
+    console.log("Permissions /bienvenue appliquées aux rôles autorisés.");
   } catch (error) {
     console.error("Erreur lors de l’enregistrement des commandes slash :", error);
   }
