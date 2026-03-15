@@ -72,6 +72,7 @@ async function buildWelcomeCard(user, memberCount) {
   ctx.fillStyle = "rgba(0, 0, 0, 0.10)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Parchemin du titre
   const parchmentX = 330;
   const parchmentY = 70;
   const parchmentW = 380;
@@ -120,6 +121,7 @@ async function buildWelcomeCard(user, memberCount) {
   drawCenteredText(ctx, "Bienvenue à bord !", 520, 127, 330, 40, "#533014");
   ctx.restore();
 
+  // Avatar
   const avatarX = 300;
   const avatarY = 285;
   const avatarRadius = 92;
@@ -166,6 +168,7 @@ async function buildWelcomeCard(user, memberCount) {
   ctx.lineWidth = 3;
   ctx.stroke();
 
+  // Panneau bois
   const woodX = 430;
   const woodY = 220;
   const woodW = 360;
@@ -181,6 +184,7 @@ async function buildWelcomeCard(user, memberCount) {
   drawCenteredText(ctx, user.username, 610, 282, 310, 56, "#f2b532");
   ctx.restore();
 
+  // Sous-texte
   const subX = 430;
   const subY = 365;
   const subW = 360;
