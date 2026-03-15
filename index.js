@@ -68,7 +68,7 @@ client.on(Events.GuildMemberAdd, async member => {
     const attachment = await buildWelcomeCard(member.user);
 
     await welcomeChannel.send({
-      content: `🏴‍☠️ Bienvenue à bord, ${member} !`,
+      content: `👒 Bienvenue chez Les Chapeaux de Paille moussaillon ${member} 👒!`,
       files: [attachment]
     });
 
