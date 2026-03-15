@@ -29,15 +29,19 @@ module.exports = {
         });
       }
 
-      const targetUser = interaction.options.getUser("utilisateur") || interaction.user;
-      const attachment = await buildWelcomeCard(targetUser, interaction.guild.memberCount);
+      const targetUser =
+        interaction.options.getUser("utilisateur") || interaction.user;
+
+      const attachment = await buildWelcomeCard(targetUser);
 
       await interaction.reply({
         content: `🏴‍☠️ Aperçu de la carte de bienvenue pour **${targetUser.username}** :`,
         files: [attachment]
       });
+
     } catch (error) {
       console.error("Erreur lors de la commande /bienvenue :", error);
+
       await interaction.reply({
         content: "❌ Impossible de générer la carte de bienvenue.",
         ephemeral: true

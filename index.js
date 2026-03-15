@@ -14,16 +14,12 @@ const {
 const { GUILD_ID, WELCOME_CHANNEL_ID } = require("./config");
 const { buildWelcomeCard } = require("./utils/welcomeCard");
 
-// --- Initialisation du client Discord avec les intents nécessaires
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers
   ]
 });
-
-// --- Chargement des commandes
 
 const commands = [];
 client.commands = new Map();
@@ -38,8 +34,6 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
   commands.push(command.data.toJSON());
 }
-
-// --- Quand le bot est prêt
 
 client.once(Events.ClientReady, async readyClient => {
   console.log(`Bot connecté : ${readyClient.user.tag}`);
@@ -58,8 +52,6 @@ client.once(Events.ClientReady, async readyClient => {
   }
 });
 
-// --- Événement déclenché lorsqu'un nouveau membre rejoint le serveur
-
 client.on(Events.GuildMemberAdd, async member => {
   try {
     const username = member.user.username;
@@ -73,18 +65,17 @@ client.on(Events.GuildMemberAdd, async member => {
     const welcomeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
     if (!welcomeChannel) return;
 
-    const attachment = await buildWelcomeCard(member.user, member.guild.memberCount);
+    const attachment = await buildWelcomeCard(member.user);
 
     await welcomeChannel.send({
       content: `🏴‍☠️ Bienvenue à bord, ${member} !`,
       files: [attachment]
     });
+
   } catch (error) {
     console.error("Erreur lors de la création de la carte de bienvenue :", error);
   }
 });
-
-// --- Gestion des commandes slash
 
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return;
