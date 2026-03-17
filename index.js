@@ -12,13 +12,15 @@ const {
   ApplicationCommandPermissionType
 } = require("discord.js");
 
-const { GUILD_ID, WELCOME_CHANNEL_ID, ALLOWED_ROLE_IDS } = require("./config");
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
+const { GUILD_ID, WELCOME_CHANNEL_ID, ALLOWED_ROLE_IDS, VOICE_SOUND_MEMBERS } = require("./config");
 const { buildWelcomeCard } = require("./utils/welcomeCard");
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates
   ]
 });
 
@@ -120,6 +122,56 @@ client.on(Events.GuildMemberAdd, async member => {
 
   } catch (error) {
     console.error("Erreur lors de la création de la carte de bienvenue :", error);
+  }
+});
+
+// Événement pour jouer un son quand un membre rejoint un canal vocal
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+  try {
+    // Vérifie que le membre a rejoint un canal vocal (pas juste changé de canal)
+    if (!oldState.channel && newState.channel) {
+      const memberId = newState.member.id;
+      const soundFile = VOICE_SOUND_MEMBERS[memberId];
+
+      // Si ce membre a un son configuré
+      if (soundFile) {
+        const soundPath = path.join(__dirname, soundFile);
+
+        // Vérifie que le fichier existe
+        if (!fs.existsSync(soundPath)) {
+          console.warn(`Fichier audio non trouvé : ${soundPath}`);
+          return;
+        }
+
+        try {
+          // Se connecte au canal vocal
+          const connection = joinVoiceChannel({
+            channelId: newState.channel.id,
+            guildId: newState.guild.id,
+            adapterCreator: newState.guild.voiceAdapterCreator
+          });
+
+          // Crée le lecteur audio et la ressource
+          const player = createAudioPlayer();
+          const resource = createAudioResource(soundPath);
+
+          // Joue le son
+          player.play(resource);
+          connection.subscribe(player);
+
+          // Se déconnecte après la fin du son
+          player.on(AudioPlayerStatus.Idle, () => {
+            connection.destroy();
+            console.log(`Son joué pour ${newState.member.user.tag}`);
+          });
+
+        } catch (error) {
+          console.error(`Erreur lors de la lecture du son pour ${newState.member.user.tag} :`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Erreur dans l'événement VoiceStateUpdate :", error);
   }
 });
 
