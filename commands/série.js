@@ -6,7 +6,7 @@ const streaksPath = path.join(__dirname, "..", "streaks.json");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("mystreak")
+    .setName("série")
     .setDescription("Affiche ta série de connexions vocales 🔥"),
 
   execute: async (interaction) => {
