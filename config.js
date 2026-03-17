@@ -8,8 +8,10 @@ module.exports = {
     "1425092687815508078"  //--- Rôle Admin
   ],
 
-  // Configuration son pour l'arrivée en vocal
+  //--- Configuration son pour l'arrivée en vocal de Noa
+
   VOICE_SOUND_MEMBERS: {
-    "1136331992150053014": "./sounds/MonstreNoa.mp3"
+    "1136331992150053014": "./sounds/MonstreNoa.mp3",
+    "829365573766479883": "./sounds/MonstreNoa.mp3"
   }
 };
