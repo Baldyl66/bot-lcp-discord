@@ -144,6 +144,46 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       const memberId = member.id;
       console.log(`✅ ${member.user.tag} a rejoint le vocal (${newState.channel.name}). ID: ${memberId}`);
       
+      // === Gestion des STREAKS ===
+      try {
+        const streaksPath = path.join(__dirname, "streaks.json");
+        let streaksData = {};
+
+        if (fs.existsSync(streaksPath)) {
+          streaksData = JSON.parse(fs.readFileSync(streaksPath, "utf8"));
+        }
+
+        const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
+        const userStreak = streaksData[memberId] || { streak: 0, lastVoiceDate: null };
+
+        // Si c'est un nouveau jour
+        if (userStreak.lastVoiceDate !== today) {
+          // Vérifier si c'était hier
+          const lastDate = new Date(userStreak.lastVoiceDate);
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          if (userStreak.lastVoiceDate === yesterday.toISOString().split("T")[0]) {
+            // Hier = continuer la série
+            userStreak.streak += 1;
+          } else {
+            // Plus de 1 jour = recommencer
+            userStreak.streak = 1;
+          }
+          
+          userStreak.lastVoiceDate = today;
+          streaksData[memberId] = userStreak;
+
+          fs.writeFileSync(streaksPath, JSON.stringify(streaksData, null, 2));
+          
+          const streakEmoji = "🔥".repeat(Math.min(userStreak.streak, 3));
+          console.log(`📊 Streak de ${member.user.tag}: ${streakEmoji} (${userStreak.streak} jours)`);
+        }
+      } catch (streakError) {
+        console.error("Erreur lors de la gestion du streak:", streakError);
+      }
+      // === FIN Gestion des STREAKS ===
+      
       const soundFile = VOICE_SOUND_MEMBERS[memberId];
       console.log(`Fichier son configuré: ${soundFile}`);
 
