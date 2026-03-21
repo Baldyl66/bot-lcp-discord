@@ -20,30 +20,30 @@ function sauvegarderRappels(rappels) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rappel")
-    .setDescription("Crée un rappel personnel avec unités multiples")
+    .setDescription("Crée un rappel personnel")
     .addNumberOption(option =>
       option
         .setName("jours")
         .setDescription("Nombre de jours")
-        .setMinValue(0)
+        .setRequired(false)
     )
     .addNumberOption(option =>
       option
         .setName("heures")
         .setDescription("Nombre d'heures")
-        .setMinValue(0)
+        .setRequired(false)
     )
     .addNumberOption(option =>
       option
         .setName("minutes")
         .setDescription("Nombre de minutes")
-        .setMinValue(0)
+        .setRequired(false)
     )
     .addNumberOption(option =>
       option
         .setName("secondes")
         .setDescription("Nombre de secondes")
-        .setMinValue(0)
+        .setRequired(false)
     )
     .addStringOption(option =>
       option
