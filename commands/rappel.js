@@ -21,64 +21,34 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("rappel")
     .setDescription("Crée un rappel personnel")
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName("minute")
-        .setDescription("Rappel en minutes")
-        .addNumberOption(option =>
-          option
-            .setName("nombre")
-            .setDescription("Nombre de minutes")
-            .setRequired(true)
-            .setMinValue(1)
-        )
-        .addStringOption(option =>
-          option
-            .setName("message")
-            .setDescription("Le message du rappel")
-            .setRequired(true)
+    .addStringOption(option =>
+      option
+        .setName("unité")
+        .setDescription("Unité de temps")
+        .setRequired(true)
+        .addChoices(
+          { name: "Minutes", value: "minute" },
+          { name: "Heures", value: "heure" },
+          { name: "Jours", value: "jour" }
         )
     )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName("heure")
-        .setDescription("Rappel en heures")
-        .addNumberOption(option =>
-          option
-            .setName("nombre")
-            .setDescription("Nombre d'heures")
-            .setRequired(true)
-            .setMinValue(1)
-        )
-        .addStringOption(option =>
-          option
-            .setName("message")
-            .setDescription("Le message du rappel")
-            .setRequired(true)
-        )
+    .addNumberOption(option =>
+      option
+        .setName("nombre")
+        .setDescription("Nombre de temps (minutes, heures ou jours)")
+        .setRequired(true)
+        .setMinValue(1)
     )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName("jour")
-        .setDescription("Rappel en jours")
-        .addNumberOption(option =>
-          option
-            .setName("nombre")
-            .setDescription("Nombre de jours")
-            .setRequired(true)
-            .setMinValue(1)
-        )
-        .addStringOption(option =>
-          option
-            .setName("message")
-            .setDescription("Le message du rappel")
-            .setRequired(true)
-        )
+    .addStringOption(option =>
+      option
+        .setName("message")
+        .setDescription("Le message du rappel")
+        .setRequired(true)
     ),
 
   async execute(interaction) {
     try {
-      const subcommand = interaction.options.getSubcommand();
+      const unite = interaction.options.getString("unité");
       const nombre = interaction.options.getNumber("nombre");
       const message = interaction.options.getString("message");
 
@@ -86,13 +56,13 @@ module.exports = {
       let delai;
       let uniteDisplay;
 
-      if (subcommand === "minute") {
+      if (unite === "minute") {
         delai = nombre * 60 * 1000;
         uniteDisplay = `${nombre} minute${nombre > 1 ? 's' : ''}`;
-      } else if (subcommand === "heure") {
+      } else if (unite === "heure") {
         delai = nombre * 60 * 60 * 1000;
         uniteDisplay = `${nombre} heure${nombre > 1 ? 's' : ''}`;
-      } else if (subcommand === "jour") {
+      } else if (unite === "jour") {
         delai = nombre * 24 * 60 * 60 * 1000;
         uniteDisplay = `${nombre} jour${nombre > 1 ? 's' : ''}`;
       }
