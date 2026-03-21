@@ -65,41 +65,10 @@ module.exports = {
         .setName("message")
         .setDescription("Le message du rappel")
         .setRequired(true)
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName("list")
-        .setDescription("Affiche tous tes rappels actifs")
     ),
 
   async execute(interaction) {
     try {
-      // Commande /rappel list
-      if (interaction.options.getSubcommand() === "list") {
-        const rappels = chargerRappels();
-        const userRappels = rappels[interaction.user.id] || [];
-
-        if (userRappels.length === 0) {
-          return await interaction.reply({
-            content: "✅ Tu n'as aucun rappel actif.",
-            ephemeral: true
-          });
-        }
-
-        const embed = new EmbedBuilder()
-          .setTitle(`⏰ Tes rappels (${userRappels.length})`)
-          .setColor(0x43b581)
-          .setDescription(
-            userRappels
-              .map((r, i) => `${i + 1}. **${r.message}** - dans ${formaterTemps(r.tempsRestant)}`)
-              .join("\n")
-          )
-          .setFooter({ text: "Utilise /rappel pour en ajouter un nouveau" });
-
-        return await interaction.reply({ embeds: [embed], ephemeral: true });
-      }
-
-      // Commande /rappel [temps] [message]
       const tempsStr = interaction.options.getString("temps");
       const message = interaction.options.getString("message");
 
