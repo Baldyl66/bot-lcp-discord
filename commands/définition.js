@@ -175,26 +175,37 @@ module.exports = {
   },
 
   formatterDefinition(texte) {
-    // Nettoyer et limiter le texte
-    let formatted = texte
-      .split('\n')
-      .filter(ligne => ligne.trim().length > 0)
-      .slice(0, 15) // Garder les 15 premières lignes
-      .map(ligne => {
-        ligne = ligne.trim();
-        // Ajouter des puces pour chaque phrase/ligne
-        if (ligne.length > 3) {
-          return `• ${ligne}`;
-        }
-        return ligne;
-      })
-      .join('\n');
-
-    // Limiter à 2048 caractères (limite Discord)
-    if (formatted.length > 2048) {
-      formatted = formatted.substring(0, 2045) + '...';
+    let lines = texte.split('\n').filter(ligne => ligne.trim().length > 0);
+    let formatted = [];
+    
+    for (let i = 0; i < lines.length && formatted.join('\n').length < 1900; i++) {
+      let ligne = lines[i].trim();
+      
+      // Détecter les titres (===)
+      if (ligne.match(/^={3,}/)) {
+        const titre = ligne.replace(/=/g, '').trim();
+        formatted.push(`\n${'═'.repeat(Math.min(30, titre.length + 4))}`);
+        formatted.push(`  ✦ **${titre}** ✦`);
+        formatted.push(`${'═'.repeat(Math.min(30, titre.length + 4))}\n`);
+      }
+      // Détecter les sous-titres (====)
+      else if (ligne.match(/^={4,}/)) {
+        const sousTitre = ligne.replace(/=/g, '').trim();
+        formatted.push(`\n▸ __${sousTitre}__`);
+      }
+      // Autres contenus
+      else if (ligne.length > 5) {
+        formatted.push(`  ${ligne}`);
+      }
     }
 
-    return formatted || 'Aucune information disponible';
+    let result = formatted.join('\n');
+    
+    // Vérifier la limite Discord
+    if (result.length > 2048) {
+      result = result.substring(0, 2040) + '\n...';
+    }
+
+    return result || 'Aucune information disponible';
   }
 };
