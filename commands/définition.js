@@ -10,11 +10,18 @@ module.exports = {
         .setName("mot")
         .setDescription("Le mot à définir")
         .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName("domaine")
+        .setDescription("Domaine optionnel (botanique, informatique, etc.)")
+        .setRequired(false)
     ),
 
   async execute(interaction) {
     try {
       const mot = interaction.options.getString("mot").toLowerCase().trim();
+      const domaine = interaction.options.getString("domaine")?.toLowerCase().trim() || null;
 
       if (mot.length < 2) {
         return interaction.reply({
@@ -74,14 +81,19 @@ module.exports = {
         }
 
         wikiExtract = wikiExtract
-          .substring(0, 1024)
+          .substring(0, 2048)
           .replace(/\n\n/g, "\n");
 
         const wikiEmbed = new EmbedBuilder()
-          .setTitle(`📖 ${mot.toUpperCase()}`)
+          .setTitle(`📖 ${mot.toUpperCase()}${domaine ? ` (${domaine})` : ""}`)
           .setColor(0x3498db)
           .setDescription(wikiExtract || "Aucune information")
-          .setFooter({ text: "Powered by Wikipedia (FR)" });
+          .addFields({
+            name: "📚 Source",
+            value: "Wikipedia (FR)",
+            inline: true
+          })
+          .setFooter({ text: "Cliquez sur la source pour plus d'infos" });
 
         return await interaction.reply({ embeds: [wikiEmbed] });
       }
@@ -117,15 +129,35 @@ module.exports = {
       // Nettoyer et limiter le texte
       let cleanText = extract
         .replace(/\n\n\n+/g, "\n")
-        .split("\n")[0]
-        .substring(0, 1024);
+        .substring(0, 2048);
 
-      // Construire l'embed
+      // Si domaine spécifié, essayer de filtrer
+      if (domaine) {
+        const lignes = cleanText.split("\n");
+        const domaineFiltered = lignes.filter(ligne => ligne.toLowerCase().includes(domaine));
+        if (domaineFiltered.length > 0) {
+          cleanText = domaineFiltered.join("\n").substring(0, 1024);
+        }
+      }
+
+      // Construire l'embed avec meilleure structure
       const embed = new EmbedBuilder()
-        .setTitle(`📖 ${mot.toUpperCase()}`)
-        .setColor(0x3498db)
+        .setTitle(`📖 ${mot.toUpperCase()}${domaine ? ` (${domaine})` : ""}`)
+        .setColor(0x9b59b6)
         .setDescription(cleanText)
-        .setFooter({ text: "Powered by Wiktionnaire (FR)" });
+        .addFields(
+          {
+            name: "📚 Source",
+            value: "Wiktionnaire (FR)",
+            inline: true
+          },
+          {
+            name: "🏷️ Langue",
+            value: "Français",
+            inline: true
+          }
+        )
+        .setFooter({ text: "Utilisez /définition pour plus de résultats" });
 
       await interaction.reply({ embeds: [embed] });
 
