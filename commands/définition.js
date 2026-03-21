@@ -92,12 +92,18 @@ module.exports = {
         }
       }
 
+      // Formater le texte avec meilleure structure
+      const formattedText = this.formatterDefinition(cleanText);
+
+      const wiktUrl = `https://fr.wiktionary.org/wiki/${encodeURIComponent(mot)}`;
+      
       const embed = new EmbedBuilder()
         .setTitle(`📖 ${mot.toUpperCase()}${domaine ? ` (${domaine})` : ""}`)
         .setColor(0x9b59b6)
-        .setDescription(cleanText)
+        .setURL(wiktUrl)
+        .setDescription(formattedText)
         .addFields(
-          { name: "📚 Source", value: "Wiktionnaire (FR)", inline: true },
+          { name: "📚 Source", value: `[Wiktionnaire](${wiktUrl})`, inline: true },
           { name: "🏷️ Langue", value: "Français", inline: true }
         )
         .setFooter({ text: "Dictionnaire" });
@@ -145,12 +151,18 @@ module.exports = {
         }
       }
 
+      // Formater le texte avec meilleure structure
+      const formattedText = this.formatterDefinition(cleanText);
+
+      const wikiUrl = `https://fr.wikipedia.org/wiki/${encodeURIComponent(mot)}`;
+
       const embed = new EmbedBuilder()
         .setTitle(`📖 ${mot.toUpperCase()}${domaine ? ` (${domaine})` : ""}`)
         .setColor(0x3498db)
-        .setDescription(cleanText)
+        .setURL(wikiUrl)
+        .setDescription(formattedText)
         .addFields(
-          { name: "📚 Source", value: "Wikipedia (FR)", inline: true },
+          { name: "📚 Source", value: `[Wikipedia](${wikiUrl})`, inline: true },
           { name: "🏷️ Langue", value: "Français", inline: true }
         )
         .setFooter({ text: "Encyclopédie" });
@@ -160,5 +172,29 @@ module.exports = {
       console.error("Erreur Wikipedia :", error.message);
       return null;
     }
+  },
+
+  formatterDefinition(texte) {
+    // Nettoyer et limiter le texte
+    let formatted = texte
+      .split('\n')
+      .filter(ligne => ligne.trim().length > 0)
+      .slice(0, 15) // Garder les 15 premières lignes
+      .map(ligne => {
+        ligne = ligne.trim();
+        // Ajouter des puces pour chaque phrase/ligne
+        if (ligne.length > 3) {
+          return `• ${ligne}`;
+        }
+        return ligne;
+      })
+      .join('\n');
+
+    // Limiter à 2048 caractères (limite Discord)
+    if (formatted.length > 2048) {
+      formatted = formatted.substring(0, 2045) + '...';
+    }
+
+    return formatted || 'Aucune information disponible';
   }
 };
