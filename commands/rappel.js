@@ -12,6 +12,11 @@ function chargerRappels() {
   return {};
 }
 
+// Sauvegarder les rappels
+function sauvegarderRappels(rappels) {
+  fs.writeFileSync(rappelsPath, JSON.stringify(rappels, null, 2));
+}
+
 // Fonction pour parser un délai au format texte
 function parserDelai(texte) {
   if (!texte || typeof texte !== "string") return null;
@@ -73,7 +78,7 @@ module.exports = {
       if (!delai) {
         return interaction.reply({
           content: "❌ Format de temps invalide ! Utilise : `1j`, `2h`, `30min`, `45s` ou combina-les : `1h30min`, `2j 3h 30min`",
-          ephemeral: true
+          flags: 64 // ephemeral
         });
       }
 
@@ -95,7 +100,7 @@ module.exports = {
       // Répondre à l'utilisateur
       await interaction.reply({
         content: `✅ Rappel créé pour ${tempsText} : **${message}**`,
-        ephemeral: true
+        flags: 64 // ephemeral
       });
 
       // Programmer le rappel
@@ -120,17 +125,12 @@ module.exports = {
         }
       }, delai);
 
-      await interaction.reply({
-        content: `✅ Rappel défini dans **${uniteDisplay}** : *${message}*`,
-        ephemeral: true
-      });
-
     } catch (error) {
       console.error("Erreur lors de la commande /rappel :", error);
 
       await interaction.reply({
         content: "❌ Erreur lors de la création du rappel.",
-        ephemeral: true
+        flags: 64 // ephemeral
       });
     }
   }
