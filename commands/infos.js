@@ -24,13 +24,27 @@ module.exports = {
       const joinedServer = Math.floor(member.joinedTimestamp / 1000);
 
       // Rôles (sans @everyone)
-      const roles = member.roles.cache
+      const allRoles = member.roles.cache
         .filter(role => role.name !== "@everyone")
-        .map(role => role.name);
-      
-      const rolesDisplay = roles.length > 0 
-        ? roles.map(role => `• ${role}`).join("\n")
-        : "Aucun rôle spécial";
+        .map(role => ({ name: role.name, mention: role.toString() }));
+
+      // Mots-clés pour catégoriser
+      const gamesKeywords = [
+        'valorant', 'rocket league', 'minecraft', 'fortnite', 'call of duty', 'black ops', 'apex', 'csgo', 'pubg', 
+        'gta', 'elden', 'dark souls', 'rust', 'ark', 'factorio', 'terraria', 'stardew', 'palworld',
+        'albion', 'brawlhalla', 'marvel rivals', 'cyberpunk', 'subnautica', 'genshin', 'honkai', 'overwatch',
+        'warframe', 'forza', 'league of legends', 'lol', "baldur's gate", 'roblox'
+      ];
+      const platformKeywords = ['pc', 'ps5', 'ps4', 'xbox', 'switch', 'android', 'ios', 'mobile'];
+
+      // Catégoriser les rôles
+      const rolesGames = allRoles.filter(r => gamesKeywords.some(kw => r.name.toLowerCase().includes(kw)));
+      const rolesPlatforms = allRoles.filter(r => platformKeywords.some(kw => r.name.toLowerCase().includes(kw)));
+      const rolesOther = allRoles.filter(r => !rolesGames.includes(r) && !rolesPlatforms.includes(r));
+
+      const rolesGamesDisplay = rolesGames.length > 0 ? rolesGames.map(r => `• ${r.mention}`).join("\n") : "Aucun";
+      const rolesPlatformsDisplay = rolesPlatforms.length > 0 ? rolesPlatforms.map(r => `• ${r.mention}`).join("\n") : "Aucun";
+      const rolesOtherDisplay = rolesOther.length > 0 ? rolesOther.map(r => `• ${r.mention}`).join("\n") : "Aucun";
 
       // Statut avec meilleure présentation
       const statusMap = {
@@ -115,9 +129,24 @@ module.exports = {
         
         // Section rôles
         { 
-          name: `━━━━━━ 🎭 RÔLES (${roles.length}) ━━━━━━`, 
-          value: rolesDisplay || "Aucun rôle", 
+          name: `━━━━━━ 🎭 RÔLES (${allRoles.length}) ━━━━━━`, 
+          value: " ", 
           inline: false 
+        },
+        { 
+          name: "🎮 Jeux", 
+          value: rolesGamesDisplay, 
+          inline: true 
+        },
+        { 
+          name: "💻 Plateforme", 
+          value: rolesPlatformsDisplay, 
+          inline: true 
+        },
+        { 
+          name: "📌 Autres", 
+          value: rolesOtherDisplay, 
+          inline: true 
         }
       )
         .setFooter({ 
