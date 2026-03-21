@@ -12,38 +12,48 @@ function chargerRappels() {
   return {};
 }
 
-// Sauvegarder les rappels
-function sauvegarderRappels(rappels) {
-  fs.writeFileSync(rappelsPath, JSON.stringify(rappels, null, 2));
+// Fonction pour parser un délai au format texte
+function parserDelai(texte) {
+  if (!texte || typeof texte !== "string") return null;
+
+  const texteClean = texte.toLowerCase().trim();
+  let delai = 0;
+
+  // Patterns à tester
+  const patterns = [
+    { regex: /(\d+)\s*j(?:ours?)?\s*/i, ms: 24 * 60 * 60 * 1000 },
+    { regex: /(\d+)\s*h(?:eures?)?\s*/i, ms: 60 * 60 * 1000 },
+    { regex: /(\d+)\s*m(?:in(?:utes?)?)?\s*/i, ms: 60 * 1000 },
+    { regex: /(\d+)\s*s(?:ec(?:ondes?)?)?\s*/i, ms: 1000 }
+  ];
+
+  let texteRestant = texteClean;
+
+  patterns.forEach(({ regex, ms }) => {
+    const match = texteRestant.match(regex);
+    if (match) {
+      delai += parseInt(match[1]) * ms;
+      texteRestant = texteRestant.replace(regex, "");
+    }
+  });
+
+  // Vérifier qu'il n'y a pas de caractères non reconnus
+  if (texteRestant.replace(/\s/g, "").length > 0) {
+    return null; // Format invalide
+  }
+
+  return delai > 0 ? delai : null;
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rappel")
     .setDescription("Crée un rappel personnel")
-    .addNumberOption(option =>
+    .addStringOption(option =>
       option
-        .setName("jours")
-        .setDescription("Nombre de jours")
-        .setMinValue(0)
-    )
-    .addNumberOption(option =>
-      option
-        .setName("heures")
-        .setDescription("Nombre d'heures")
-        .setMinValue(0)
-    )
-    .addNumberOption(option =>
-      option
-        .setName("minutes")
-        .setDescription("Nombre de minutes")
-        .setMinValue(0)
-    )
-    .addNumberOption(option =>
-      option
-        .setName("secondes")
-        .setDescription("Nombre de secondes")
-        .setMinValue(0)
+        .setName("temps")
+        .setDescription("Temps du rappel (ex: 1j, 2h, 30min, 1h30min, 2j 3h 30min)")
+        .setRequired(true)
     )
     .addStringOption(option =>
       option
@@ -54,39 +64,17 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      const jours = interaction.options.getNumber("jours");
-      const heures = interaction.options.getNumber("heures");
-      const minutes = interaction.options.getNumber("minutes");
-      const secondes = interaction.options.getNumber("secondes");
+      const tempsText = interaction.options.getString("temps");
       const message = interaction.options.getString("message");
 
-      // Vérifier qu'au moins un temps est fourni
-      if (jours === null && heures === null && minutes === null && secondes === null) {
+      // Parser le délai
+      const delai = parserDelai(tempsText);
+
+      if (!delai) {
         return interaction.reply({
-          content: "❌ Tu dois fournir au moins une unité de temps (jours, heures, minutes ou secondes)",
+          content: "❌ Format de temps invalide ! Utilise : `1j`, `2h`, `30min`, `45s` ou combina-les : `1h30min`, `2j 3h 30min`",
           ephemeral: true
         });
-      }
-
-      // Calculer le délai total en millisecondes
-      let delai = 0;
-      let uniteDisplay = [];
-
-      if (jours) {
-        delai += jours * 24 * 60 * 60 * 1000;
-        uniteDisplay.push(`${jours}j`);
-      }
-      if (heures) {
-        delai += heures * 60 * 60 * 1000;
-        uniteDisplay.push(`${heures}h`);
-      }
-      if (minutes) {
-        delai += minutes * 60 * 1000;
-        uniteDisplay.push(`${minutes}min`);
-      }
-      if (secondes) {
-        delai += secondes * 1000;
-        uniteDisplay.push(`${secondes}s`);
       }
 
       // Sauvegarder le rappel
@@ -106,7 +94,7 @@ module.exports = {
 
       // Répondre à l'utilisateur
       await interaction.reply({
-        content: `✅ Rappel créé pour ${uniteDisplay.join(" ")} : **${message}**`,
+        content: `✅ Rappel créé pour ${tempsText} : **${message}**`,
         ephemeral: true
       });
 
