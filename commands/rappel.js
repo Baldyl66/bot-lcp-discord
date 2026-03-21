@@ -23,27 +23,21 @@ module.exports = {
     .setDescription("Crée un rappel personnel")
     .addNumberOption(option =>
       option
-        .setName("jours")
-        .setDescription("Nombre de jours")
-        .setRequired(false)
+        .setName("temps")
+        .setDescription("Nombre d'unités de temps")
+        .setRequired(true)
     )
-    .addNumberOption(option =>
+    .addStringOption(option =>
       option
-        .setName("heures")
-        .setDescription("Nombre d'heures")
-        .setRequired(false)
-    )
-    .addNumberOption(option =>
-      option
-        .setName("minutes")
-        .setDescription("Nombre de minutes")
-        .setRequired(false)
-    )
-    .addNumberOption(option =>
-      option
-        .setName("secondes")
-        .setDescription("Nombre de secondes")
-        .setRequired(false)
+        .setName("unité")
+        .setDescription("Unité de temps")
+        .setRequired(true)
+        .addChoices(
+          { name: "Secondes", value: "secondes" },
+          { name: "Minutes", value: "minutes" },
+          { name: "Heures", value: "heures" },
+          { name: "Jours", value: "jours" }
+        )
     )
     .addStringOption(option =>
       option
@@ -54,33 +48,27 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      const jours = interaction.options.getNumber("jours") || 0;
-      const heures = interaction.options.getNumber("heures") || 0;
-      const minutes = interaction.options.getNumber("minutes") || 0;
-      const secondes = interaction.options.getNumber("secondes") || 0;
+      const temps = interaction.options.getNumber("temps");
+      const unite = interaction.options.getString("unité");
       const message = interaction.options.getString("message");
 
-      // Vérifier qu'au least un champ de temps est rempli
-      if (jours === 0 && heures === 0 && minutes === 0 && secondes === 0) {
-        return await interaction.reply({
-          content: "❌ Tu dois spécifier au moins une unité de temps (jours, heures, minutes ou secondes).",
-          ephemeral: true
-        });
+      // Déterminer le délai en millisecondes
+      let delai;
+      let uniteDisplay = `${temps}`;
+
+      if (unite === "secondes") {
+        delai = temps * 1000;
+        uniteDisplay = `${temps}s`;
+      } else if (unite === "minutes") {
+        delai = temps * 60 * 1000;
+        uniteDisplay = `${temps}min`;
+      } else if (unite === "heures") {
+        delai = temps * 60 * 60 * 1000;
+        uniteDisplay = `${temps}h`;
+      } else if (unite === "jours") {
+        delai = temps * 24 * 60 * 60 * 1000;
+        uniteDisplay = `${temps}j`;
       }
-
-      // Calculer le délai total en millisecondes
-      const delai = (secondes * 1000) + 
-                    (minutes * 60 * 1000) + 
-                    (heures * 60 * 60 * 1000) + 
-                    (jours * 24 * 60 * 60 * 1000);
-
-      // Formater l'affichage
-      const parts = [];
-      if (jours > 0) parts.push(`${jours}j`);
-      if (heures > 0) parts.push(`${heures}h`);
-      if (minutes > 0) parts.push(`${minutes}min`);
-      if (secondes > 0) parts.push(`${secondes}s`);
-      const uniteDisplay = parts.join(" ");
 
       // Sauvegarder le rappel
       const rappels = chargerRappels();
