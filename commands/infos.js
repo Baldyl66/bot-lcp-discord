@@ -136,17 +136,17 @@ module.exports = {
         { 
           name: "🎮 Jeux", 
           value: rolesGamesDisplay, 
-          inline: true 
+          inline: false 
         },
         { 
           name: "💻 Plateforme", 
           value: rolesPlatformsDisplay, 
-          inline: true 
+          inline: false 
         },
         { 
           name: "📌 Autres", 
           value: rolesOtherDisplay, 
-          inline: true 
+          inline: false 
         }
       )
         .setFooter({ 
