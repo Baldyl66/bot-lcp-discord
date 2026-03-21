@@ -26,7 +26,12 @@ module.exports = {
       // Utiliser Wiktionnaire API (français, gratuit, illimité)
       const response = await axios.get(
         `https://fr.wiktionary.org/w/api.php?action=query&titles=${encodeURIComponent(mot)}&prop=extracts&explaintext=true&format=json`,
-        { timeout: 5000 }
+        { 
+          timeout: 5000,
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          }
+        }
       );
 
       const pages = response.data?.query?.pages;
