@@ -146,7 +146,7 @@ module.exports = {
         { 
           name: "💻 Plateforme", 
           value: rolesPlatformsDisplay, 
-          inline: true 
+          inline: false 
         }
       )
         .setFooter({ 
