@@ -69,90 +69,93 @@ module.exports = {
 
       // Créer l'embed amélioré
       const embed = new EmbedBuilder()
+        .setAuthor({ 
+          name: `${fullUser.username}${fullUser.bot ? " 🤖" : ""}`, 
+          iconURL: fullUser.displayAvatarURL() 
+        })
+        .setDescription(`${statusInfo.emoji} **${statusInfo.text}**`)
         .setColor(statusInfo.color)
-        .setImage(bannerURL)
-        .setThumbnail(fullUser.displayAvatarURL({ size: 512 }))
-        .setDescription(`\`${fullUser.username}\`${fullUser.bot ? " 🤖" : ""}\n${statusInfo.emoji} **${statusInfo.text}** • ${fullUser.bot ? "🤖 Bot" : "👤 Utilisateur"}`)
-        .addFields(
-          // Section identité
-          { 
-            name: "👤 PROFIL", 
-            value: `Surnom serveur: ${member.nickname ? `\`${member.nickname}\`` : "Aucun"}\nID: \`${fullUser.id}\``, 
-            inline: false 
-          },
-          
-          // Section dates
-          { 
-            name: "📅 DATES", 
-            value: `📝 Créé: <t:${accountCreated}:d> (${accountAge}j)\n🏴‍☠️ Serveur: <t:${joinedServer}:d> (${timeText})`, 
-            inline: false 
-          },
-          
-          // Section rôles
-          { 
-            name: `🎭 RÔLES (${allRoles.length})`, 
-            value: `🎮 Jeux (**${rolesGames.length}**) | 📌 Autres (**${rolesOther.length}**) | 💻 Plateforme (**${rolesPlatforms.length}**)\n\n*Clique sur les boutons ci-dessous pour voir les détails*`, 
-            inline: false 
-          }
-        )
+        .setThumbnail(fullUser.displayAvatarURL({ size: 512 }));
+
+      // Ajouter la bannière si elle existe
+      if (bannerURL) {
+        embed.setImage(bannerURL);
+      }
+
+      embed.addFields(
+        // Section identité
+        { 
+          name: "━━━━━━ 👤 IDENTITÉ ━━━━━━", 
+          value: " ", 
+          inline: false 
+        },
+        { 
+          name: "👤 Profil", 
+          value: `\`${user.username}\``, 
+          inline: true 
+        },
+        { 
+          name: "🏴‍☠️ Surnom serveur", 
+          value: member.nickname ? `\`${member.nickname}\`` : "Aucun surnom", 
+          inline: true 
+        },
+        { 
+          name: "ID", 
+          value: `\`${user.id}\``, 
+          inline: true 
+        },
+        { 
+          name: "Type", 
+          value: user.bot ? "🤖 Bot" : "👤 Utilisateur", 
+          inline: true 
+        },
+        
+        // Section dates
+        { 
+          name: "━━━━━━ 📅 DATES ━━━━━━", 
+          value: " ", 
+          inline: false 
+        },
+        { 
+          name: "📝 Compte créé", 
+          value: `<t:${accountCreated}:D>\n*Il y a ${accountAge} jours*`, 
+          inline: true 
+        },
+        { 
+          name: "🏴‍☠️ Arrivé sur serveur", 
+          value: `<t:${joinedServer}:D>\n*${timeText}*`, 
+          inline: true 
+        },
+        
+        // Section rôles
+        { 
+          name: `━━━━━━ 🎭 RÔLES (${allRoles.length}) ━━━━━━`, 
+          value: " ", 
+          inline: false 
+        },
+        { 
+          name: "🎮 Jeux", 
+          value: rolesGamesDisplay, 
+          inline: true 
+        },
+        { 
+          name: "📌 Autres", 
+          value: rolesOtherDisplay, 
+          inline: true 
+        },
+        { 
+          name: "💻 Plateforme", 
+          value: rolesPlatformsDisplay, 
+          inline: false 
+        }
+      )
         .setFooter({ 
           text: `✦ Demandé par ${interaction.user.username}`, 
           iconURL: interaction.user.displayAvatarURL() 
         })
         .setTimestamp();
 
-      // Créer les boutons
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`roles_games_${user.id}`)
-            .setLabel(`🎮 Jeux (${rolesGames.length})`)
-            .setStyle(ButtonStyle.Primary),
-          new ButtonBuilder()
-            .setCustomId(`roles_other_${user.id}`)
-            .setLabel(`📌 Autres (${rolesOther.length})`)
-            .setStyle(ButtonStyle.Secondary),
-          new ButtonBuilder()
-            .setCustomId(`roles_platforms_${user.id}`)
-            .setLabel(`💻 Plateforme (${rolesPlatforms.length})`)
-            .setStyle(ButtonStyle.Success)
-        );
-
-      const response = await interaction.reply({ embeds: [embed], components: [row] });
-
-      // Collecteur pour les boutons
-      const filter = i => i.user.id === interaction.user.id;
-      const collector = response.createMessageComponentCollector({ filter, time: 60000 });
-
-      collector.on('collect', async (i) => {
-        let detailEmbed;
-        
-        if (i.customId === `roles_games_${user.id}`) {
-          detailEmbed = new EmbedBuilder()
-            .setTitle(`🎮 Jeux de ${fullUser.username}`)
-            .setColor(0x43b581)
-            .setDescription(rolesGamesDisplay || "Aucun rôle de jeu")
-            .setThumbnail(fullUser.displayAvatarURL({ size: 256 }));
-        } else if (i.customId === `roles_other_${user.id}`) {
-          detailEmbed = new EmbedBuilder()
-            .setTitle(`📌 Autres rôles de ${fullUser.username}`)
-            .setColor(0xfaa61a)
-            .setDescription(rolesOtherDisplay || "Aucun autre rôle")
-            .setThumbnail(fullUser.displayAvatarURL({ size: 256 }));
-        } else if (i.customId === `roles_platforms_${user.id}`) {
-          detailEmbed = new EmbedBuilder()
-            .setTitle(`💻 Plateforme de ${fullUser.username}`)
-            .setColor(0x00b0f4)
-            .setDescription(rolesPlatformsDisplay || "Aucune plateforme")
-            .setThumbnail(fullUser.displayAvatarURL({ size: 256 }));
-        }
-
-        await i.update({ embeds: [detailEmbed], components: [] });
-      });
-
-      collector.on('end', () => {
-        response.edit({ components: [] }).catch(() => {});
-      });
+      await interaction.reply({ embeds: [embed] });
 
     } catch (error) {
       console.error("Erreur lors de la commande /infos :", error);
