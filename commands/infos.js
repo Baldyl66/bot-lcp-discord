@@ -23,10 +23,10 @@ module.exports = {
       // Rôles (sans @everyone)
       const roles = member.roles.cache
         .filter(role => role.name !== "@everyone")
-        .map(role => role.toString());
+        .map(role => role.name);
       
       const rolesDisplay = roles.length > 0 
-        ? roles.join(" ")
+        ? roles.join(" • ")
         : "Aucun rôle spécial";
 
       // Statut avec meilleure présentation
@@ -47,6 +47,9 @@ module.exports = {
       // Calcul de l'ancienneté du compte
       const accountAge = Math.floor((Date.now() - user.createdTimestamp) / (1000 * 60 * 60 * 24));
 
+      // Récupérer la bannière avec les options correctes
+      const bannerURL = user.bannerURL({ size: 512, extension: 'png' });
+
       // Créer l'embed amélioré
       const embed = new EmbedBuilder()
         .setAuthor({ 
@@ -55,60 +58,65 @@ module.exports = {
         })
         .setDescription(`${statusInfo.emoji} **${statusInfo.text}**`)
         .setColor(statusInfo.color)
-        .setImage(user.bannerURL({ size: 512 }))
-        .setThumbnail(user.displayAvatarURL({ size: 512 }))
-        .addFields(
-          // Section identité
-          { 
-            name: "━━━━━━ 👤 IDENTITÉ ━━━━━━", 
-            value: " ", 
-            inline: false 
-          },
-          { 
-            name: "👤 Profil", 
-            value: `\`${user.username}\``, 
-            inline: true 
-          },
-          { 
-            name: "🏴‍☠️ Surnom serveur", 
-            value: member.nickname ? `\`${member.nickname}\`` : "Aucun surnom", 
-            inline: true 
-          },
-          { 
-            name: "ID", 
-            value: `\`${user.id}\``, 
-            inline: true 
-          },
-          { 
-            name: "Type", 
-            value: user.bot ? "🤖 Bot" : "👤 Utilisateur", 
-            inline: true 
-          },
-          
-          // Section dates
-          { 
-            name: "━━━━━━ 📅 DATES ━━━━━━", 
-            value: " ", 
-            inline: false 
-          },
-          { 
-            name: "📝 Compte créé", 
-            value: `<t:${accountCreated}:D>\n*Il y a ${accountAge} jours*`, 
-            inline: true 
-          },
-          { 
-            name: "🏴‍☠️ Arrivé sur serveur", 
-            value: `<t:${joinedServer}:D>\n*${timeText}*`, 
-            inline: true 
-          },
-          
-          // Section rôles
-          { 
-            name: "━━━━━━ 🎭 RÔLES (${roles.length}) ━━━━━━", 
-            value: rolesDisplay || "Aucun rôle", 
-            inline: false 
-          }
-        )
+        .setThumbnail(user.displayAvatarURL({ size: 512 }));
+
+      // Ajouter la bannière si elle existe
+      if (bannerURL) {
+        embed.setImage(bannerURL);
+      }
+
+      embed.addFields(
+        // Section identité
+        { 
+          name: "━━━━━━ 👤 IDENTITÉ ━━━━━━", 
+          value: " ", 
+          inline: false 
+        },
+        { 
+          name: "👤 Profil", 
+          value: `\`${user.username}\``, 
+          inline: true 
+        },
+        { 
+          name: "🏴‍☠️ Surnom serveur", 
+          value: member.nickname ? `\`${member.nickname}\`` : "Aucun surnom", 
+          inline: true 
+        },
+        { 
+          name: "ID", 
+          value: `\`${user.id}\``, 
+          inline: true 
+        },
+        { 
+          name: "Type", 
+          value: user.bot ? "🤖 Bot" : "👤 Utilisateur", 
+          inline: true 
+        },
+        
+        // Section dates
+        { 
+          name: "━━━━━━ 📅 DATES ━━━━━━", 
+          value: " ", 
+          inline: false 
+        },
+        { 
+          name: "📝 Compte créé", 
+          value: `<t:${accountCreated}:D>\n*Il y a ${accountAge} jours*`, 
+          inline: true 
+        },
+        { 
+          name: "🏴‍☠️ Arrivé sur serveur", 
+          value: `<t:${joinedServer}:D>\n*${timeText}*`, 
+          inline: true 
+        },
+        
+        // Section rôles
+        { 
+          name: "━━━━━━ 🎭 RÔLES (${roles.length}) ━━━━━━", 
+          value: rolesDisplay || "Aucun rôle", 
+          inline: false 
+        }
+      )
         .setFooter({ 
           text: `✦ Demandé par ${interaction.user.username}`, 
           iconURL: interaction.user.displayAvatarURL() 
