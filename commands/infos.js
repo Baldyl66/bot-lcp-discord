@@ -15,9 +15,12 @@ module.exports = {
     try {
       const user = interaction.options.getUser("utilisateur") || interaction.user;
       const member = await interaction.guild.members.fetch(user.id);
+      
+      // Récupérer les données complètes de l'utilisateur pour avoir la bannière
+      const fullUser = await user.fetch();
 
       // Dates formatées
-      const accountCreated = Math.floor(user.createdTimestamp / 1000);
+      const accountCreated = Math.floor(fullUser.createdTimestamp / 1000);
       const joinedServer = Math.floor(member.joinedTimestamp / 1000);
 
       // Rôles (sans @everyone)
@@ -45,20 +48,20 @@ module.exports = {
       const timeText = joinTime === 0 ? "Aujourd'hui" : `${joinTime} jour${joinTime > 1 ? 's' : ''}`;
 
       // Calcul de l'ancienneté du compte
-      const accountAge = Math.floor((Date.now() - user.createdTimestamp) / (1000 * 60 * 60 * 24));
+      const accountAge = Math.floor((Date.now() - fullUser.createdTimestamp) / (1000 * 60 * 60 * 24));
 
-      // Récupérer la bannière avec les options correctes
-      const bannerURL = user.bannerURL({ size: 512, extension: 'png' });
+      // Récupérer la bannière
+      const bannerURL = fullUser.bannerURL({ size: 512, extension: 'png' });
 
       // Créer l'embed amélioré
       const embed = new EmbedBuilder()
         .setAuthor({ 
-          name: `${user.username}${user.bot ? " 🤖" : ""}`, 
-          iconURL: user.displayAvatarURL() 
+          name: `${fullUser.username}${fullUser.bot ? " 🤖" : ""}`, 
+          iconURL: fullUser.displayAvatarURL() 
         })
         .setDescription(`${statusInfo.emoji} **${statusInfo.text}**`)
         .setColor(statusInfo.color)
-        .setThumbnail(user.displayAvatarURL({ size: 512 }));
+        .setThumbnail(fullUser.displayAvatarURL({ size: 512 }));
 
       // Ajouter la bannière si elle existe
       if (bannerURL) {
