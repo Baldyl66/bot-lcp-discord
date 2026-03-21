@@ -85,17 +85,25 @@ client.once(Events.ClientReady, async readyClient => {
 
     console.log("Permissions à appliquer :", JSON.stringify(permissions, null, 2));
 
-    const permResponse = await rest.put(
-      Routes.applicationCommandPermissions(
-        readyClient.user.id,
-        GUILD_ID,
-        bienvenueCommand.id
-      ),
-      { body: { permissions } }
-    );
+    try {
+      const permResponse = await rest.put(
+        Routes.applicationCommandPermissions(
+          readyClient.user.id,
+          GUILD_ID,
+          bienvenueCommand.id
+        ),
+        { body: { permissions } }
+      );
 
-    console.log("Réponse permissions Discord :", permResponse);
-    console.log("Permissions /bienvenue appliquées aux rôles autorisés.");
+      console.log("Réponse permissions Discord :", permResponse);
+      console.log("Permissions /bienvenue appliquées aux rôles autorisés.");
+    } catch (permError) {
+      if (permError.code === 20001) {
+        console.log("⚠️  Les permissions doivent être définies manuellement dans Discord (Intégrations → Commandes)");
+      } else {
+        console.error("Erreur lors de l'application des permissions :", permError.message);
+      }
+    }
   } catch (error) {
     console.error("Erreur lors de l’enregistrement des commandes slash :", error);
   }
