@@ -26,7 +26,7 @@ module.exports = {
         .map(role => role.name);
       
       const rolesDisplay = roles.length > 0 
-        ? roles.join(" • ")
+        ? roles.map(role => `• ${role}`).join("\n")
         : "Aucun rôle spécial";
 
       // Statut avec meilleure présentation
@@ -112,7 +112,7 @@ module.exports = {
         
         // Section rôles
         { 
-          name: "━━━━━━ 🎭 RÔLES (${roles.length}) ━━━━━━", 
+          name: `━━━━━━ 🎭 RÔLES (${roles.length}) ━━━━━━`, 
           value: rolesDisplay || "Aucun rôle", 
           inline: false 
         }
