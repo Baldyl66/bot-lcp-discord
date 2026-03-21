@@ -20,24 +20,30 @@ function sauvegarderRappels(rappels) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rappel")
-    .setDescription("Crée un rappel personnel")
-    .addStringOption(option =>
+    .setDescription("Crée un rappel personnel avec unités multiples")
+    .addNumberOption(option =>
       option
-        .setName("unité")
-        .setDescription("Unité de temps")
-        .setRequired(true)
-        .addChoices(
-          { name: "Minutes", value: "minute" },
-          { name: "Heures", value: "heure" },
-          { name: "Jours", value: "jour" }
-        )
+        .setName("jours")
+        .setDescription("Nombre de jours")
+        .setMinValue(0)
     )
     .addNumberOption(option =>
       option
-        .setName("nombre")
-        .setDescription("Nombre de temps (minutes, heures ou jours)")
-        .setRequired(true)
-        .setMinValue(1)
+        .setName("heures")
+        .setDescription("Nombre d'heures")
+        .setMinValue(0)
+    )
+    .addNumberOption(option =>
+      option
+        .setName("minutes")
+        .setDescription("Nombre de minutes")
+        .setMinValue(0)
+    )
+    .addNumberOption(option =>
+      option
+        .setName("secondes")
+        .setDescription("Nombre de secondes")
+        .setMinValue(0)
     )
     .addStringOption(option =>
       option
@@ -48,24 +54,33 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      const unite = interaction.options.getString("unité");
-      const nombre = interaction.options.getNumber("nombre");
+      const jours = interaction.options.getNumber("jours") || 0;
+      const heures = interaction.options.getNumber("heures") || 0;
+      const minutes = interaction.options.getNumber("minutes") || 0;
+      const secondes = interaction.options.getNumber("secondes") || 0;
       const message = interaction.options.getString("message");
 
-      // Déterminer le délai en millisecondes
-      let delai;
-      let uniteDisplay;
-
-      if (unite === "minute") {
-        delai = nombre * 60 * 1000;
-        uniteDisplay = `${nombre} minute${nombre > 1 ? 's' : ''}`;
-      } else if (unite === "heure") {
-        delai = nombre * 60 * 60 * 1000;
-        uniteDisplay = `${nombre} heure${nombre > 1 ? 's' : ''}`;
-      } else if (unite === "jour") {
-        delai = nombre * 24 * 60 * 60 * 1000;
-        uniteDisplay = `${nombre} jour${nombre > 1 ? 's' : ''}`;
+      // Vérifier qu'au least un champ de temps est rempli
+      if (jours === 0 && heures === 0 && minutes === 0 && secondes === 0) {
+        return await interaction.reply({
+          content: "❌ Tu dois spécifier au moins une unité de temps (jours, heures, minutes ou secondes).",
+          ephemeral: true
+        });
       }
+
+      // Calculer le délai total en millisecondes
+      const delai = (secondes * 1000) + 
+                    (minutes * 60 * 1000) + 
+                    (heures * 60 * 60 * 1000) + 
+                    (jours * 24 * 60 * 60 * 1000);
+
+      // Formater l'affichage
+      const parts = [];
+      if (jours > 0) parts.push(`${jours}j`);
+      if (heures > 0) parts.push(`${heures}h`);
+      if (minutes > 0) parts.push(`${minutes}min`);
+      if (secondes > 0) parts.push(`${secondes}s`);
+      const uniteDisplay = parts.join(" ");
 
       // Sauvegarder le rappel
       const rappels = chargerRappels();
