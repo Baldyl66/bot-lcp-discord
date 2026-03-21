@@ -55,8 +55,8 @@ module.exports = {
         })
         .setDescription(`${statusInfo.emoji} **${statusInfo.text}**`)
         .setColor(statusInfo.color)
+        .setImage(user.bannerURL({ size: 512 }))
         .setThumbnail(user.displayAvatarURL({ size: 512 }))
-        .setBanner(user.bannerURL({ size: 512 }))
         .addFields(
           // Section identité
           { 
