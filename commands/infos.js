@@ -35,7 +35,7 @@ module.exports = {
         'albion', 'brawlhalla', 'marvel rivals', 'cyberpunk', 'subnautica', 'genshin', 'honkai', 'overwatch',
         'warframe', 'forza', 'league of legends', 'lol', "baldur's gate", 'roblox'
       ];
-      const platformKeywords = ['pc', 'ps5', 'ps4', 'xbox', 'switch', 'android', 'ios', 'mobile'];
+      const platformKeywords = ['pc', 'ps5', 'ps4', 'xbox', 'switch', 'android', 'ios', 'mobile', 'console'];
 
       // Catégoriser les rôles
       const rolesGames = allRoles.filter(r => gamesKeywords.some(kw => r.name.toLowerCase().includes(kw)));
@@ -136,17 +136,17 @@ module.exports = {
         { 
           name: "🎮 Jeux", 
           value: rolesGamesDisplay, 
-          inline: false 
-        },
-        { 
-          name: "💻 Plateforme", 
-          value: rolesPlatformsDisplay, 
-          inline: false 
+          inline: true 
         },
         { 
           name: "📌 Autres", 
           value: rolesOtherDisplay, 
-          inline: false 
+          inline: true 
+        },
+        { 
+          name: "💻 Plateforme", 
+          value: rolesPlatformsDisplay, 
+          inline: true 
         }
       )
         .setFooter({ 
