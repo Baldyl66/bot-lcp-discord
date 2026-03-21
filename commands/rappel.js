@@ -17,67 +17,84 @@ function sauvegarderRappels(rappels) {
   fs.writeFileSync(rappelsPath, JSON.stringify(rappels, null, 2));
 }
 
-// Parser le temps (ex: "1h", "30min", "2d")
-function parserTemps(tempsStr) {
-  const match = tempsStr.match(/^(\d+)([smhdjw])$/i);
-  if (!match) return null;
-
-  const nombre = parseInt(match[1]);
-  const unite = match[2].toLowerCase();
-
-  const conversions = {
-    s: 1000,
-    m: 60 * 1000,
-    h: 60 * 60 * 1000,
-    d: 24 * 60 * 60 * 1000,
-    j: 24 * 60 * 60 * 1000,
-    w: 7 * 24 * 60 * 60 * 1000
-  };
-
-  return nombre * (conversions[unite] || 0);
-}
-
-// Formater le temps en texte lisible
-function formaterTemps(ms) {
-  const secondes = Math.floor(ms / 1000);
-  const minutes = Math.floor(secondes / 60);
-  const heures = Math.floor(minutes / 60);
-  const jours = Math.floor(heures / 24);
-
-  if (jours > 0) return `${jours}j`;
-  if (heures > 0) return `${heures}h`;
-  if (minutes > 0) return `${minutes}min`;
-  return `${secondes}s`;
-}
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("rappel")
     .setDescription("Crée un rappel personnel")
-    .addStringOption(option =>
-      option
-        .setName("temps")
-        .setDescription("Temps avant le rappel (ex: 1h, 30min, 2d)")
-        .setRequired(true)
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName("minute")
+        .setDescription("Rappel en minutes")
+        .addNumberOption(option =>
+          option
+            .setName("nombre")
+            .setDescription("Nombre de minutes")
+            .setRequired(true)
+            .setMinValue(1)
+        )
+        .addStringOption(option =>
+          option
+            .setName("message")
+            .setDescription("Le message du rappel")
+            .setRequired(true)
+        )
     )
-    .addStringOption(option =>
-      option
-        .setName("message")
-        .setDescription("Le message du rappel")
-        .setRequired(true)
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName("heure")
+        .setDescription("Rappel en heures")
+        .addNumberOption(option =>
+          option
+            .setName("nombre")
+            .setDescription("Nombre d'heures")
+            .setRequired(true)
+            .setMinValue(1)
+        )
+        .addStringOption(option =>
+          option
+            .setName("message")
+            .setDescription("Le message du rappel")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName("jour")
+        .setDescription("Rappel en jours")
+        .addNumberOption(option =>
+          option
+            .setName("nombre")
+            .setDescription("Nombre de jours")
+            .setRequired(true)
+            .setMinValue(1)
+        )
+        .addStringOption(option =>
+          option
+            .setName("message")
+            .setDescription("Le message du rappel")
+            .setRequired(true)
+        )
     ),
 
   async execute(interaction) {
     try {
-      const tempsStr = interaction.options.getString("temps");
+      const subcommand = interaction.options.getSubcommand();
+      const nombre = interaction.options.getNumber("nombre");
       const message = interaction.options.getString("message");
 
-      const delai = parserTemps(tempsStr);
-      if (!delai || delai <= 0) {
-        return await interaction.reply({
-          content: "❌ Format invalide! Utilise: 30min, 1h, 2d, 1w (s, m, h, d, j, w)",
-          ephemeral: true
-        });
+      // Déterminer le délai en millisecondes
+      let delai;
+      let uniteDisplay;
+
+      if (subcommand === "minute") {
+        delai = nombre * 60 * 1000;
+        uniteDisplay = `${nombre} minute${nombre > 1 ? 's' : ''}`;
+      } else if (subcommand === "heure") {
+        delai = nombre * 60 * 60 * 1000;
+        uniteDisplay = `${nombre} heure${nombre > 1 ? 's' : ''}`;
+      } else if (subcommand === "jour") {
+        delai = nombre * 24 * 60 * 60 * 1000;
+        uniteDisplay = `${nombre} jour${nombre > 1 ? 's' : ''}`;
       }
 
       // Sauvegarder le rappel
@@ -100,10 +117,9 @@ module.exports = {
         try {
           const user = await interaction.client.users.fetch(interaction.user.id);
           const embed = new EmbedBuilder()
-            .setTitle("⏰ Tes rappels")
+            .setTitle("⏰ Rappel")
             .setDescription(`**${message}**`)
-            .setColor(0xfaa61a)
-            .setFooter({ text: "Tu peux fermer ce message" });
+            .setColor(0xfaa61a);
 
           await user.send({ embeds: [embed] });
 
@@ -119,7 +135,7 @@ module.exports = {
       }, delai);
 
       await interaction.reply({
-        content: `✅ Rappel défini dans **${formaterTemps(delai)}** : *${message}*`,
+        content: `✅ Rappel défini dans **${uniteDisplay}** : *${message}*`,
         ephemeral: true
       });
 
