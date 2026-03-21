@@ -184,9 +184,27 @@ module.exports = {
       // Détecter les titres (===)
       if (ligne.match(/^={3,}/)) {
         const titre = ligne.replace(/=/g, '').trim();
-        formatted.push(`\n${'═'.repeat(Math.min(30, titre.length + 4))}`);
-        formatted.push(`  ✦ **${titre}** ✦`);
-        formatted.push(`${'═'.repeat(Math.min(30, titre.length + 4))}\n`);
+        
+        // Vérifier s'il y a du contenu après ce titre
+        let hasContent = false;
+        for (let j = i + 1; j < lines.length; j++) {
+          let nextLine = lines[j].trim();
+          if (nextLine.match(/^={3,}/)) {
+            // Prochain titre trouvé, pas de contenu
+            break;
+          }
+          if (nextLine.length > 5) {
+            hasContent = true;
+            break;
+          }
+        }
+        
+        // Afficher le titre seulement s'il y a du contenu
+        if (hasContent) {
+          formatted.push(`\n${'═'.repeat(Math.min(30, titre.length + 4))}`);
+          formatted.push(`  ✦ **${titre}** ✦`);
+          formatted.push(`${'═'.repeat(Math.min(30, titre.length + 4))}\n`);
+        }
       }
       // Détecter les sous-titres (====)
       else if (ligne.match(/^={4,}/)) {
