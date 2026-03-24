@@ -7,10 +7,4 @@ module.exports = {
     "1476639420265533613",  //--- Rôle Assistant
     "1425092687815508078"  //--- Rôle Admin
   ],
-
-  //--- Configuration son pour l'arrivée en vocal de Noa
-
-  VOICE_SOUND_MEMBERS: {
-    "1136331992150053014": "./sounds/Monstre_Noa.ogg"
-  }
 };
