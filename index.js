@@ -54,20 +54,18 @@ client.once(Events.ClientReady, async readyClient => {
 
     console.log("Commandes enregistrées :", registeredCommands.map(c => c.name));
 
-    const bienvenueCommand = Array.isArray(registeredCommands)
-      ? registeredCommands.find(command => command.name === "bienvenue")
-      : null;
-
-    console.log("Commande bienvenue trouvée :", bienvenueCommand);
     console.log("ALLOWED_ROLE_IDS :", ALLOWED_ROLE_IDS);
 
     const allowedRoleIds = [...new Set(ALLOWED_ROLE_IDS.filter(Boolean))];
     console.log("Rôles à autoriser :", allowedRoleIds);
 
-    if (!bienvenueCommand || allowedRoleIds.length === 0) {
-      console.warn("Permissions /bienvenue non appliquées (commande ou rôles introuvables).");
+    if (allowedRoleIds.length === 0) {
+      console.warn("Aucun rôle autorisé - permissions non appliquées.");
       return;
     }
+
+    // Commandes qui nécessitent des permissions spéciales
+    const commandsToRestrict = ["bienvenue", "changerprefix"];
 
     // L'ID du serveur correspond aussi au rôle @everyone.
     const permissions = [
@@ -85,23 +83,34 @@ client.once(Events.ClientReady, async readyClient => {
 
     console.log("Permissions à appliquer :", JSON.stringify(permissions, null, 2));
 
-    try {
-      const permResponse = await rest.put(
-        Routes.applicationCommandPermissions(
-          readyClient.user.id,
-          GUILD_ID,
-          bienvenueCommand.id
-        ),
-        { body: { permissions } }
-      );
+    // Appliquer les permissions à chaque commande restreinte
+    for (const commandName of commandsToRestrict) {
+      const command = Array.isArray(registeredCommands)
+        ? registeredCommands.find(c => c.name === commandName)
+        : null;
 
-      console.log("Réponse permissions Discord :", permResponse);
-      console.log("Permissions /bienvenue appliquées aux rôles autorisés.");
-    } catch (permError) {
-      if (permError.code === 20001) {
-        console.log("⚠️  Les permissions doivent être définies manuellement dans Discord (Intégrations → Commandes)");
-      } else {
-        console.error("Erreur lors de l'application des permissions :", permError.message);
+      if (!command) {
+        console.warn(`Commande /${commandName} non trouvée.`);
+        continue;
+      }
+
+      try {
+        await rest.put(
+          Routes.applicationCommandPermissions(
+            readyClient.user.id,
+            GUILD_ID,
+            command.id
+          ),
+          { body: { permissions } }
+        );
+
+        console.log(`✅ Permissions appliquées à /${commandName}.`);
+      } catch (permError) {
+        if (permError.code === 20001) {
+          console.log("⚠️  Les permissions doivent être définies manuellement dans Discord (Intégrations → Commandes)");
+        } else {
+          console.error(`Erreur lors de l'application des permissions à /${commandName} :`, permError.message);
+        }
       }
     }
   } catch (error) {
