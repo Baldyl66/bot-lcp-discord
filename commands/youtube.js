@@ -1,9 +1,12 @@
 const { SlashCommandBuilder } = require("discord.js");
-const ytdl = require("ytdl-core");
+const { YouTube } = require("@distube/youtube");
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
 
 // L'ID utilisateur de Dylan
 const DYLAN_ID = "829365573766479883";
+
+// Initialiser YouTube
+const youtube = new YouTube();
 
 // Fonction pour vérifier que c'est Dylan
 function isDylan(userId) {
@@ -60,19 +63,24 @@ module.exports = {
       let isDestroyed = false;
 
       try {
-        // Valider et télécharger l'audio YouTube
-        if (!ytdl.validateURL(youtubeUrl)) {
-          throw new Error("URL YouTube invalide");
+        // Récupérer l'info de la vidéo YouTube
+        console.log(`📥 Téléchargement des infos...`);
+        const video = await youtube.getVideo(youtubeUrl);
+
+        if (!video) {
+          throw new Error("Vidéo non trouvée");
         }
 
-        // Créer le stream audio depuis YouTube
-        const stream = ytdl(youtubeUrl, {
-          quality: "highestaudio",
-          filter: "audioonly",
-          highWaterMark: 1 << 25
-        });
+        console.log(`✅ Vidéo trouvée: ${video.title}`);
 
-        // Créer la ressource audio directement à partir du stream
+        // Créer le stream audio
+        const stream = await video.download({ quality: "lowest" });
+
+        if (!stream) {
+          throw new Error("Impossible de créer le stream");
+        }
+
+        // Créer la ressource audio
         const resource = createAudioResource(stream, {
           inlineVolume: true
         });
@@ -82,7 +90,7 @@ module.exports = {
         connection.subscribe(player);
 
         await interaction.editReply({
-          content: "🎵 Lecture en cours..."
+          content: `🎵 Lecture: **${video.title}** (${Math.floor(video.duration / 60)}min)`
         }).catch(() => {});
 
         console.log(`✅ Lecture lancée`);
