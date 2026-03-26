@@ -1,12 +1,11 @@
 const { SlashCommandBuilder } = require("discord.js");
-const YouTube = require("@distube/youtube");
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
+const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
 
 // L'ID utilisateur de Dylan
 const DYLAN_ID = "829365573766479883";
-
-// Initialiser YouTube
-const youtube = new YouTube();
 
 // Fonction pour vérifier que c'est Dylan
 function isDylan(userId) {
@@ -63,25 +62,43 @@ module.exports = {
       let isDestroyed = false;
 
       try {
-        // Récupérer l'info de la vidéo YouTube
-        console.log(`📥 Téléchargement des infos...`);
-        const video = await youtube.getVideo(youtubeUrl);
+        console.log(`📥 Téléchargement avec yt-dlp...`);
 
-        if (!video) {
-          throw new Error("Vidéo non trouvée");
-        }
+        // Télécharger l'audio avec yt-dlp via CLI
+        const downloadPromise = new Promise((resolve, reject) => {
+          const cmd = `yt-dlp --no-warnings --extractor-args "youtube:player_client=web" -f bestaudio -o "/tmp/yt_%(id)s.%(ext)s" "${youtubeUrl}"`;
+          
+          exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+              reject(new Error(`yt-dlp: ${stderr || error.message}`));
+              return;
+            }
+            
+            // Récupérer le fichier téléchargé
+            fs.readdir("/tmp", (err, files) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              
+              const videoId = youtubeUrl.match(/watch\?v=([^&]+)/)?.[1];
+              const file = files.find(f => f.startsWith(`yt_${videoId}`));
+              
+              if (!file) {
+                reject(new Error("Fichier téléchargé non trouvé"));
+                return;
+              }
+              
+              resolve(path.join("/tmp", file));
+            });
+          });
+        });
 
-        console.log(`✅ Vidéo trouvée: ${video.title}`);
+        const file = await downloadPromise;
+        console.log(`✅ Fichier téléchargé: ${file}`);
 
-        // Créer le stream audio
-        const stream = await video.download({ quality: "lowest" });
-
-        if (!stream) {
-          throw new Error("Impossible de créer le stream");
-        }
-
-        // Créer la ressource audio
-        const resource = createAudioResource(stream, {
+        // Créer la ressource audio depuis le fichier
+        const resource = createAudioResource(fs.createReadStream(file), {
           inlineVolume: true
         });
 
@@ -90,7 +107,7 @@ module.exports = {
         connection.subscribe(player);
 
         await interaction.editReply({
-          content: `🎵 Lecture: **${video.title}** (${Math.floor(video.duration / 60)}min)`
+          content: `🎵 Lecture en cours...`
         }).catch(() => {});
 
         console.log(`✅ Lecture lancée`);
@@ -101,7 +118,11 @@ module.exports = {
             isDestroyed = true;
             try {
               connection.destroy();
-            } catch (e) {}
+              fs.unlinkSync(file);
+              console.log(`✅ Fichier supprimé`);
+            } catch (e) {
+              console.error(`Erreur suppression: ${e.message}`);
+            }
             console.log(`✅ Lecture terminée`);
           }
         });
@@ -113,20 +134,22 @@ module.exports = {
             isDestroyed = true;
             try {
               connection.destroy();
+              fs.unlinkSync(file);
             } catch (e) {}
           }
         });
 
-        // Gérer les erreurs du stream
-        stream.on("error", error => {
-          console.error("❌ Erreur stream :", error.message);
+        // Timeout de sécurité (30 min)
+        setTimeout(() => {
           if (!isDestroyed) {
             isDestroyed = true;
             try {
               connection.destroy();
+              fs.unlinkSync(file);
             } catch (e) {}
+            console.log(`⏱️ Lecture arrêtée (timeout)`);
           }
-        });
+        }, 30 * 60 * 1000);
 
       } catch (downloadError) {
         try {
@@ -150,7 +173,7 @@ module.exports = {
         await interaction.reply({
           content: "❌ Une erreur s'est produite.",
           ephemeral: true
-        }).catch(() => {});
+        });
       }
     }
   }
