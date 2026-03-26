@@ -1,8 +1,6 @@
 const { SlashCommandBuilder } = require("discord.js");
-const ytdl = require("ytdl-core");
+const { play } = require("play-dl");
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
-const fs = require("fs");
-const path = require("path");
 
 // L'ID utilisateur de Dylan
 const DYLAN_ID = "829365573766479883";
@@ -43,14 +41,6 @@ module.exports = {
 
       const youtubeUrl = interaction.options.getString("lien");
 
-      // Valider le lien YouTube
-      if (!ytdl.validateURL(youtubeUrl)) {
-        return await interaction.reply({
-          content: "❌ Le lien fourni n'est pas un lien YouTube valide.",
-          ephemeral: true
-        });
-      }
-
       // Répondre immédiatement pour éviter le timeout
       await interaction.deferReply();
 
@@ -63,20 +53,25 @@ module.exports = {
         adapterCreator: interaction.guild.voiceAdapterCreator
       });
 
-      console.log(`🎵 Dylan lance un téléchargement YouTube: ${youtubeUrl}`);
+      console.log(`🎵 Dylan lance : ${youtubeUrl}`);
 
       // Créer le lecteur audio
       const player = createAudioPlayer();
+      let isDestroyed = false;
 
       try {
-        // Télécharger l'audio en streaming
-        const stream = ytdl(youtubeUrl, {
-          quality: "highestaudio",
-          filter: "audioonly"
-        });
+        // Récupérer le stream YouTube
+        const stream = await play.stream(youtubeUrl);
+        
+        if (!stream) {
+          throw new Error("Impossible de récupérer le stream");
+        }
 
         // Créer la ressource audio
-        const resource = createAudioResource(stream);
+        const resource = createAudioResource(stream.stream, {
+          inputType: stream.type,
+          inlineVolume: true
+        });
 
         // Jouer le son
         player.play(resource);
@@ -86,40 +81,53 @@ module.exports = {
           content: "🎵 Lecture en cours..."
         });
 
-        console.log(`✅ Lecture YouTube lancée`);
+        console.log(`✅ Lecture lancée`);
 
-        // Gérer les événements du lecteur
+        // Gérer la fin de la lecture
         player.on(AudioPlayerStatus.Idle, () => {
-          connection.destroy();
-          console.log(`✅ Lecture YouTube terminée, déconnexion`);
+          if (!isDestroyed) {
+            isDestroyed = true;
+            try {
+              connection.destroy();
+            } catch (e) {}
+            console.log(`✅ Lecture terminée, déconnexion`);
+          }
         });
 
+        // Gérer les erreurs du lecteur
         player.on("error", error => {
-          console.error("❌ Erreur lors de la lecture :", error);
-          connection.destroy();
+          console.error("❌ Erreur du lecteur :", error.message);
+          if (!isDestroyed) {
+            isDestroyed = true;
+            try {
+              connection.destroy();
+            } catch (e) {}
+          }
         });
 
       } catch (downloadError) {
-        connection.destroy();
-        console.error("❌ Erreur lors du téléchargement YouTube :", downloadError);
+        try {
+          connection.destroy();
+        } catch (e) {}
+        console.error("❌ Erreur :", downloadError.message);
         
         return await interaction.editReply({
-          content: `❌ Erreur lors du téléchargement : ${downloadError.message}`
-        });
+          content: `❌ Erreur : ${downloadError.message}`
+        }).catch(() => {});
       }
 
     } catch (error) {
-      console.error("❌ Erreur dans la commande youtube :", error);
+      console.error("❌ Erreur dans la commande youtube :", error.message);
       
       if (interaction.deferred) {
         await interaction.editReply({
           content: "❌ Une erreur s'est produite."
-        });
+        }).catch(() => {});
       } else {
         await interaction.reply({
           content: "❌ Une erreur s'est produite.",
           ephemeral: true
-        });
+        }).catch(() => {});
       }
     }
   }
