@@ -3,7 +3,12 @@ const { ALLOWED_ROLE_IDS } = require("../config");
 
 function hasPermission(member) {
   if (!member || !member.roles || !member.roles.cache) return false;
-  return ALLOWED_ROLE_IDS.some(roleId => member.roles.cache.has(roleId));
+  // Uniquement Capitaine et Assistant
+  const CHANGEPREFIX_ROLE_IDS = [
+    "1389995764280856626",   // Capitaine
+    "1476639420265533613"    // Assistant
+  ];
+  return CHANGEPREFIX_ROLE_IDS.some(roleId => member.roles.cache.has(roleId));
 }
 
 module.exports = {

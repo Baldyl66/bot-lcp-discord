@@ -1,9 +1,21 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { ALLOWED_ROLE_IDS } = require("../config");
+
+function hasInfosPermission(member) {
+  if (!member || !member.roles || !member.roles.cache) return false;
+  // Uniquement Capitaine et Assistant
+  const INFOS_ROLE_IDS = [
+    "1389995764280856626",   // Capitaine
+    "1476639420265533613"    // Assistant
+  ];
+  return INFOS_ROLE_IDS.some(roleId => member.roles.cache.has(roleId));
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("infos")
     .setDescription("Affiche les infos détaillées d'un membre")
+    .setDefaultMemberPermissions("0")
     .addUserOption(option =>
       option
         .setName("utilisateur")
@@ -13,6 +25,15 @@ module.exports = {
 
   async execute(interaction) {
     try {
+      const commandMember = interaction.member;
+
+      if (!hasInfosPermission(commandMember)) {
+        return await interaction.reply({
+          content: "❌ Tu n'as pas la permission d'utiliser cette commande.",
+          ephemeral: true
+        });
+      }
+
       const user = interaction.options.getUser("utilisateur") || interaction.user;
       const member = await interaction.guild.members.fetch(user.id);
       
