@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("discord.js");
-const { YouTube } = require("@distube/youtube");
+const YouTube = require("@distube/youtube");
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
 
 // L'ID utilisateur de Dylan
