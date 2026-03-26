@@ -7,4 +7,9 @@ module.exports = {
     "1476639420265533613",  //--- Rôle Assistant
     "1425092687815508078"  //--- Rôle Admin
   ],
+
+  VOICE_SOUND_MEMBERS: {
+    // Ajouter les IDs des membres et leurs fichiers sons ici
+    // Exemple: "829365573766479883": "sounds/mon-son.mp3"
+  }
 };

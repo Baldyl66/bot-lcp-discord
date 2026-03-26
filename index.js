@@ -202,7 +202,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       }
       // === FIN Gestion des STREAKS ===
       
-      const soundFile = VOICE_SOUND_MEMBERS[memberId];
+      const soundFile = VOICE_SOUND_MEMBERS ? VOICE_SOUND_MEMBERS[memberId] : null;
       console.log(`Fichier son configuré: ${soundFile}`);
 
       // Si ce membre a un son configuré
