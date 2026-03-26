@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("discord.js");
-const { play } = require("play-dl");
+const ytdl = require("ytdl-core");
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
 
 // L'ID utilisateur de Dylan
@@ -60,16 +60,20 @@ module.exports = {
       let isDestroyed = false;
 
       try {
-        // Récupérer le stream YouTube
-        const stream = await play.stream(youtubeUrl);
-        
-        if (!stream) {
-          throw new Error("Impossible de récupérer le stream");
+        // Valider et télécharger l'audio YouTube
+        if (!ytdl.validateURL(youtubeUrl)) {
+          throw new Error("URL YouTube invalide");
         }
 
-        // Créer la ressource audio
-        const resource = createAudioResource(stream.stream, {
-          inputType: stream.type,
+        // Créer le stream audio depuis YouTube
+        const stream = ytdl(youtubeUrl, {
+          quality: "highestaudio",
+          filter: "audioonly",
+          highWaterMark: 1 << 25
+        });
+
+        // Créer la ressource audio directement à partir du stream
+        const resource = createAudioResource(stream, {
           inlineVolume: true
         });
 
@@ -79,7 +83,7 @@ module.exports = {
 
         await interaction.editReply({
           content: "🎵 Lecture en cours..."
-        });
+        }).catch(() => {});
 
         console.log(`✅ Lecture lancée`);
 
@@ -90,13 +94,24 @@ module.exports = {
             try {
               connection.destroy();
             } catch (e) {}
-            console.log(`✅ Lecture terminée, déconnexion`);
+            console.log(`✅ Lecture terminée`);
           }
         });
 
         // Gérer les erreurs du lecteur
         player.on("error", error => {
-          console.error("❌ Erreur du lecteur :", error.message);
+          console.error("❌ Erreur lecteur :", error.message);
+          if (!isDestroyed) {
+            isDestroyed = true;
+            try {
+              connection.destroy();
+            } catch (e) {}
+          }
+        });
+
+        // Gérer les erreurs du stream
+        stream.on("error", error => {
+          console.error("❌ Erreur stream :", error.message);
           if (!isDestroyed) {
             isDestroyed = true;
             try {
@@ -111,13 +126,13 @@ module.exports = {
         } catch (e) {}
         console.error("❌ Erreur :", downloadError.message);
         
-        return await interaction.editReply({
+        await interaction.editReply({
           content: `❌ Erreur : ${downloadError.message}`
         }).catch(() => {});
       }
 
     } catch (error) {
-      console.error("❌ Erreur dans la commande youtube :", error.message);
+      console.error("❌ Erreur commande youtube :", error.message);
       
       if (interaction.deferred) {
         await interaction.editReply({
