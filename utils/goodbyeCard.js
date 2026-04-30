@@ -54,14 +54,14 @@ async function buildGoodbyeCard(user) {
   
   // Première diagonale (haut-gauche à bas-droite)
   ctx.beginPath();
-  ctx.moveTo(avatarX + 12, avatarY + 12);
-  ctx.lineTo(avatarX + avatarWidth - 12, avatarY + avatarHeight - 12);
+  ctx.moveTo(avatarX + 10, avatarY + 10);
+  ctx.lineTo(avatarX + avatarWidth - 10, avatarY + avatarHeight - 10);
   ctx.stroke();
   
   // Deuxième diagonale (haut-droite à bas-gauche)
   ctx.beginPath();
-  ctx.moveTo(avatarX + avatarWidth - 12, avatarY + 12);
-  ctx.lineTo(avatarX + 12, avatarY + avatarHeight - 12);
+  ctx.moveTo(avatarX + avatarWidth - 10, avatarY + 10);
+  ctx.lineTo(avatarX + 10, avatarY + avatarHeight - 10);
   ctx.stroke();
 
   drawCenteredText(
