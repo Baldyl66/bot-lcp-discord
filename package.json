@@ -13,7 +13,7 @@
     "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.19.1",
     "@distube/youtube": "^1.0.4",
-    "axios": "^1.13.6",
+    "axios": "^1.7.7",
     "canvas": "^3.2.1",
     "discord.js": "^14.25.1",
     "dotenv": "^17.3.1",

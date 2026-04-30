@@ -15,6 +15,7 @@ const {
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
 const { GUILD_ID, WELCOME_CHANNEL_ID, ALLOWED_ROLE_IDS, VOICE_SOUND_MEMBERS } = require("./config");
 const { buildWelcomeCard } = require("./utils/welcomeCard");
+const { buildGoodbyeCard } = require("./utils/goodbyeCard");
 
 const client = new Client({
   intents: [
@@ -65,7 +66,7 @@ client.once(Events.ClientReady, async readyClient => {
     }
 
     // Commandes qui nécessitent des permissions spéciales
-    const commandsToRestrict = ["bienvenue", "changerprefix"];
+    const commandsToRestrict = ["bienvenue", "adieu", "changerprefix"];
 
     // L'ID du serveur correspond aussi au rôle @everyone.
     const permissions = [
@@ -140,6 +141,24 @@ client.on(Events.GuildMemberAdd, async member => {
 
   } catch (error) {
     console.error("Erreur lors de la création de la carte de bienvenue :", error);
+  }
+});
+
+// Événement pour la carte de départ quand un membre quitte
+client.on(Events.GuildMemberRemove, async member => {
+  try {
+    const goodbyeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    if (!goodbyeChannel) return;
+
+    const attachment = await buildGoodbyeCard(member.user);
+
+    await goodbyeChannel.send({
+      content: `⚔️ Au revoir ${member.user.username}... merci pour tout mais ton exécution a sonné ⚔️!`,
+      files: [attachment]
+    });
+
+  } catch (error) {
+    console.error("Erreur lors de la création de la carte de départ :", error);
   }
 });
 
