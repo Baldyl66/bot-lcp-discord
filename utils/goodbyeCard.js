@@ -28,7 +28,7 @@ async function buildGoodbyeCard(user) {
   const avatarWidth = 155;
   const avatarHeight = 165;
   const avatarX = 510 - avatarWidth / 2;
-  const avatarY = 250;
+  const avatarY = 265;
 
   ctx.shadowColor = "rgba(0,0,0,0.20)";
   ctx.shadowBlur = 10;
