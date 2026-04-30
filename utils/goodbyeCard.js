@@ -25,10 +25,10 @@ async function buildGoodbyeCard(user) {
     user.displayAvatarURL({ extension: "png", size: 512 })
   );
 
-  const avatarWidth = 205;
-  const avatarHeight = 220;
+  const avatarWidth = 170;
+  const avatarHeight = 180;
   const avatarX = 540 - avatarWidth / 2;
-  const avatarY = 205;
+  const avatarY = 220;
 
   ctx.shadowColor = "rgba(0,0,0,0.20)";
   ctx.shadowBlur = 10;
@@ -48,27 +48,27 @@ async function buildGoodbyeCard(user) {
 
   // Croix rouge pour indiquer la mort
   ctx.strokeStyle = "#FF0000";
-  ctx.lineWidth = 12;
+  ctx.lineWidth = 10;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   
   // Première diagonale (haut-gauche à bas-droite)
   ctx.beginPath();
-  ctx.moveTo(avatarX + 20, avatarY + 20);
-  ctx.lineTo(avatarX + avatarWidth - 20, avatarY + avatarHeight - 20);
+  ctx.moveTo(avatarX + 15, avatarY + 15);
+  ctx.lineTo(avatarX + avatarWidth - 15, avatarY + avatarHeight - 15);
   ctx.stroke();
   
   // Deuxième diagonale (haut-droite à bas-gauche)
   ctx.beginPath();
-  ctx.moveTo(avatarX + avatarWidth - 20, avatarY + 20);
-  ctx.lineTo(avatarX + 20, avatarY + avatarHeight - 20);
+  ctx.moveTo(avatarX + avatarWidth - 15, avatarY + 15);
+  ctx.lineTo(avatarX + 15, avatarY + avatarHeight - 15);
   ctx.stroke();
 
   drawCenteredText(
     ctx,
     user.username,
     540,
-    490,
+    505,
     360,
     46,
     "#4a3422",
