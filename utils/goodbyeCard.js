@@ -27,8 +27,8 @@ async function buildGoodbyeCard(user) {
 
   const avatarWidth = 170;
   const avatarHeight = 180;
-  const avatarX = 540 - avatarWidth / 2;
-  const avatarY = 220;
+  const avatarX = 510 - avatarWidth / 2;
+  const avatarY = 235;
 
   ctx.shadowColor = "rgba(0,0,0,0.20)";
   ctx.shadowBlur = 10;
@@ -67,8 +67,8 @@ async function buildGoodbyeCard(user) {
   drawCenteredText(
     ctx,
     user.username,
-    540,
-    505,
+    510,
+    515,
     360,
     46,
     "#4a3422",
