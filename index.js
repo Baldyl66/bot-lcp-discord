@@ -13,7 +13,7 @@ const {
 } = require("discord.js");
 
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require("@discordjs/voice");
-const { GUILD_ID, WELCOME_CHANNEL_ID, ALLOWED_ROLE_IDS, VOICE_SOUND_MEMBERS } = require("./config");
+const { GUILD_ID, WELCOME_CHANNEL_ID, GOODBYE_CHANNEL_ID, ALLOWED_ROLE_IDS, VOICE_SOUND_MEMBERS } = require("./config");
 const { buildWelcomeCard } = require("./utils/welcomeCard");
 const { buildGoodbyeCard } = require("./utils/goodbyeCard");
 
@@ -147,7 +147,7 @@ client.on(Events.GuildMemberAdd, async member => {
 // Événement pour la carte de départ quand un membre quitte
 client.on(Events.GuildMemberRemove, async member => {
   try {
-    const goodbyeChannel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+    const goodbyeChannel = member.guild.channels.cache.get(GOODBYE_CHANNEL_ID);
     if (!goodbyeChannel) return;
 
     const attachment = await buildGoodbyeCard(member.user);
