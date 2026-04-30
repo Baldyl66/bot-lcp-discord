@@ -48,20 +48,20 @@ async function buildGoodbyeCard(user) {
 
   // Croix rouge pour indiquer la mort
   ctx.strokeStyle = "#FF0000";
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 12;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   
   // Première diagonale (haut-gauche à bas-droite)
   ctx.beginPath();
-  ctx.moveTo(avatarX + 15, avatarY + 15);
-  ctx.lineTo(avatarX + avatarWidth - 15, avatarY + avatarHeight - 15);
+  ctx.moveTo(avatarX + 12, avatarY + 12);
+  ctx.lineTo(avatarX + avatarWidth - 12, avatarY + avatarHeight - 12);
   ctx.stroke();
   
   // Deuxième diagonale (haut-droite à bas-gauche)
   ctx.beginPath();
-  ctx.moveTo(avatarX + avatarWidth - 15, avatarY + 15);
-  ctx.lineTo(avatarX + 15, avatarY + avatarHeight - 15);
+  ctx.moveTo(avatarX + avatarWidth - 12, avatarY + 12);
+  ctx.lineTo(avatarX + 12, avatarY + avatarHeight - 12);
   ctx.stroke();
 
   drawCenteredText(
