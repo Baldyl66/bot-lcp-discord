@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id             String        @id @default(uuid())
+  discordGuildId String        @unique
+  name           String
+  createdAt      DateTime      @default(now())
+  
+  rooms          Room[]
+  mapSettings    MapSettings?
+}
+
+model Room {
+  id               String   @id @default(uuid())
+  guildId          String
+  discordChannelId String   @unique
+  name             String
+  type             String   // "voice", "text", etc.
+  positionX        Float    @default(0)
+  positionY        Float    @default(0)
+  width            Float    @default(150)
+  height           Float    @default(100)
+  
+  guild            Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String   @id @default(uuid())
+  discordUserId String   @unique
+  username      String
+  avatarUrl     String?
+}
+
+model MapSettings {
+  id         String   @id @default(uuid())
+  guildId    String   @unique
+  theme      String   @default("default")
+  background String?
+  configJSON String   @default("{}") // Store specific settings as JSON
+
+  guild      Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}

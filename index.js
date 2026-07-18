@@ -298,4 +298,81 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 });
 
+// =========================================================
+// DISCORD VIRTUAL WORLD - Événements Temps Réel
+// =========================================================
+const VIRTUAL_WORLD_GUILD_ID = "1459937260181917861";
+const VIRTUAL_WORLD_API = process.env.VIRTUAL_WORLD_API || "http://localhost:3001/api/bot/events";
+
+async function sendVirtualWorldEvent(eventType, payload) {
+  try {
+    // Si le backend n'est pas encore prêt, cela échouera silencieusement (catch)
+    await fetch(VIRTUAL_WORLD_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: eventType, data: payload })
+    });
+  } catch (err) {
+    // Backend indisponible pour le moment
+  }
+}
+
+client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
+  try {
+    const guildId = newState.guild?.id || oldState.guild?.id;
+    console.log(`[Debug] VoiceStateUpdate reçu pour le serveur : ${guildId}`);
+    if (guildId !== VIRTUAL_WORLD_GUILD_ID) {
+      console.log(`[Debug] Serveur ignoré car il ne correspond pas à ${VIRTUAL_WORLD_GUILD_ID}`);
+      return;
+    }
+
+    let member = newState.member || oldState.member;
+    if (!member && newState.userId) {
+      const guild = newState.guild || oldState.guild;
+      if (guild) {
+        member = await guild.members.fetch(newState.userId).catch(() => null);
+      }
+    }
+    
+    if (!member || member.user.bot) return; // Ne pas tracker les bots
+
+    const userPayload = {
+      userId: member.id,
+      username: member.user.username,
+      avatarUrl: member.user.displayAvatarURL({ extension: 'png', forceStatic: false }) || null,
+    };
+
+    // Utilisateur rejoint un vocal (pas de oldChannel, presence d'un newChannel)
+    if (!oldState.channelId && newState.channelId) {
+      console.log(`[Virtual World] ${userPayload.username} JOIN ${newState.channel.name}`);
+      await sendVirtualWorldEvent("USER_JOIN_VOICE", {
+        ...userPayload,
+        channelId: newState.channelId,
+        channelName: newState.channel.name
+      });
+    }
+    // Utilisateur change de vocal
+    else if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
+      console.log(`[Virtual World] ${userPayload.username} MOVE ${oldState.channel.name} -> ${newState.channel.name}`);
+      await sendVirtualWorldEvent("USER_MOVE", {
+        ...userPayload,
+        oldChannelId: oldState.channelId,
+        newChannelId: newState.channelId,
+        newChannelName: newState.channel.name
+      });
+    }
+    // Utilisateur quitte un vocal
+    else if (oldState.channelId && !newState.channelId) {
+      console.log(`[Virtual World] ${userPayload.username} LEAVE ${oldState.channel.name}`);
+      await sendVirtualWorldEvent("USER_LEAVE_VOICE", {
+        ...userPayload,
+        channelId: oldState.channelId
+      });
+    }
+
+  } catch (error) {
+    console.error("[Virtual World] Erreur VoiceStateUpdate:", error);
+  }
+});
+
 client.login(process.env.DISCORD_TOKEN);
