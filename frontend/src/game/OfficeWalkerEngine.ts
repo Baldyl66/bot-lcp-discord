@@ -742,7 +742,7 @@ class Player {
     const textMetrics = ctx.measureText(name);
     const textW = textMetrics.width;
     const cx = sx + this.spriteW / 2;
-    const cy = sy - 28; 
+    const cy = this.spotify ? sy - 28 : sy - 14;
     
     // Background du pseudo (avec bordure verte pour signaler "Moi")
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
@@ -898,7 +898,7 @@ class RemotePlayer {
     const textMetrics = ctx.measureText(name);
     const textW = textMetrics.width;
     const cx = sx + this.spriteW / 2;
-    const cy = sy - 28; 
+    const cy = this.spotify ? sy - 28 : sy - 14;
     
     // Background du pseudo
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
@@ -1072,12 +1072,44 @@ export class OfficeGame {
     this.lastTime = performance.now();
     this.fpsAccum = 0; this.fpsFrames = 0;
 
+    this.onClick = this.onClick.bind(this);
+    this.canvas.addEventListener('click', this.onClick);
+
     requestAnimationFrame(t => this._loop(t));
   }
 
   destroy() {
     this.running = false;
     this.input.destroy();
+    this.canvas.removeEventListener('click', this.onClick);
+  }
+
+  onClick(e: MouseEvent) {
+    const rect = this.canvas.getBoundingClientRect();
+    // Gérer l'échelle si le canvas est redimensionné via CSS
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    
+    const cx = (e.clientX - rect.left) * scaleX;
+    const cy = (e.clientY - rect.top) * scaleY;
+
+    const players = [this.player, ...Array.from(this.remotePlayers.values())];
+    
+    for (const p of players) {
+      if (!p) continue;
+      const id = (p as any).userId || (p as any).user?.id;
+      if (!id || id === 'spectator') continue;
+
+      const spriteOffsetX = (p.spriteW - p.hw) / 2;
+      const spriteOffsetY = p.spriteH - p.hh;
+      const sx = p.x - spriteOffsetX - this.camera.x;
+      const sy = p.y - spriteOffsetY - this.camera.y;
+
+      if (cx >= sx && cx <= sx + p.spriteW && cy >= sy && cy <= sy + p.spriteH) {
+        window.open(`https://discord.com/users/${id}`, '_blank');
+        return;
+      }
+    }
   }
 
   updateRemotePlayer(id: string, username: string, channelId: string, avatarUrl: string) {
