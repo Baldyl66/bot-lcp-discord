@@ -6,7 +6,10 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 
+// Charge d'abord le .env du dossier racine (où sont DISCORD_CLIENT_ID, etc)
 dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Charge ensuite le .env du dossier backend (écrase si doublons)
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
