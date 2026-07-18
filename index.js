@@ -317,6 +317,30 @@ async function sendVirtualWorldEvent(eventType, payload) {
   }
 }
 
+// === ÉCOUTE DES ORDRES DU BACKEND ===
+const { io } = require("socket.io-client");
+const backendSocket = io("http://localhost:3001");
+
+backendSocket.on("connect", () => {
+  console.log("[Virtual World] Bot connecté au Backend Web !");
+});
+
+backendSocket.on("MOVE_USER_DISCORD", async ({ userId, channelId }) => {
+  try {
+    const guild = await client.guilds.fetch(VIRTUAL_WORLD_GUILD_ID);
+    const member = await guild.members.fetch(userId);
+    // On déplace l'utilisateur uniquement s'il est déjà connecté en vocal quelque part
+    if (member && member.voice.channel) {
+      if (member.voice.channel.id !== channelId) {
+        await member.voice.setChannel(channelId);
+        console.log(`[Virtual World] Ordre exécuté : ${member.user.username} déplacé -> ${channelId}`);
+      }
+    }
+  } catch (e) {
+    console.error("[Virtual World] Erreur lors du déplacement Discord:", e.message);
+  }
+});
+
 client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
   try {
     const guildId = newState.guild?.id || oldState.guild?.id;
@@ -372,6 +396,50 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 
   } catch (error) {
     console.error("[Virtual World] Erreur VoiceStateUpdate:", error);
+  }
+});
+
+client.on(Events.PresenceUpdate, async (oldPresence, newPresence) => {
+  try {
+    const guildId = newPresence.guild?.id;
+    if (guildId !== VIRTUAL_WORLD_GUILD_ID) return;
+    
+    const member = newPresence.member;
+    if (!member || member.user.bot) return;
+
+    // Cherche l'activité Spotify
+    const spotifyActivity = newPresence.activities.find(a => a.name === 'Spotify');
+    
+    if (spotifyActivity) {
+      const song = spotifyActivity.details; // Nom de la chanson
+      const artist = spotifyActivity.state; // Artiste
+      let albumArt = null;
+      if (spotifyActivity.assets && spotifyActivity.assets.largeImage) {
+        const largeImage = spotifyActivity.assets.largeImage;
+        if (largeImage.startsWith('spotify:')) {
+          albumArt = `https://i.scdn.co/image/${largeImage.slice(8)}`;
+        } else {
+          albumArt = `https://i.scdn.co/image/${largeImage}`;
+        }
+      }
+      
+      await sendVirtualWorldEvent("USER_SPOTIFY_UPDATE", {
+        userId: member.id,
+        spotify: { song, artist, albumArt }
+      });
+    } else {
+      // Si on n'écoute plus Spotify (il était peut-être en train d'écouter avant)
+      // On peut vérifier si oldPresence avait Spotify, si oui on envoie null
+      const hadSpotify = oldPresence?.activities.some(a => a.name === 'Spotify');
+      if (hadSpotify) {
+        await sendVirtualWorldEvent("USER_SPOTIFY_UPDATE", {
+          userId: member.id,
+          spotify: null
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[Virtual World] Erreur PresenceUpdate:", error);
   }
 });
 
