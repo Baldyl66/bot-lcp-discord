@@ -23,7 +23,7 @@ export default class MainScene extends PhaserEngine.Scene {
     this.cameras.main.setBackgroundColor('#1e1f22'); // Couleur de fond Discord la plus sombre
     
     // Grille subtile en fond
-    const grid = this.add.grid(400, 400, 800, 800, 40, 40, 0x000000, 0, 0xffffff, 0.03);
+    this.add.grid(400, 400, 800, 800, 40, 40, 0x000000, 0, 0xffffff, 0.03);
     
     this.drawRooms();
   }
@@ -59,7 +59,7 @@ export default class MainScene extends PhaserEngine.Scene {
     });
   }
 
-  public updateAvatar(userId: string, username: string, channelId: string, avatarUrl: string | null) {
+  public updateAvatar(userId: string, username: string, _channelId: string, avatarUrl: string | null) {
     const room = this.rooms[Math.floor(Math.random() * this.rooms.length)]; 
 
     // Position cible avec un peu de padding
