@@ -66,18 +66,28 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     const tokenData = await tokenResponse.json();
     if (!tokenData.access_token) throw new Error("Invalid token response");
 
-    const userResponse = await fetch('https://discord.com/api/users/@me', {
+    const userResponse = await fetch('https://discord.com/api/v10/users/@me', {
       headers: { authorization: `${tokenData.token_type} ${tokenData.access_token}` }
     });
 
     const userData = await userResponse.json();
+    console.log("Discord User Data:", JSON.stringify(userData, null, 2));
     
     // On renvoie l'utilisateur vers le frontend avec ses infos dans l'URL (ou via un JWT, mais pour l'instant via params)
     // Sécurité: c'est un projet local / tech demo, passage par hash pour que ce ne soit pas envoyé au serveur web (localStorage le lira)
+    
+    let decoUrl = null;
+    if (userData.avatar_decoration_data && userData.avatar_decoration_data.asset) {
+      decoUrl = `https://cdn.discordapp.com/avatar-decoration-presets/${userData.avatar_decoration_data.asset}.png`;
+    } else if (userData.avatar_decoration) {
+      decoUrl = `https://cdn.discordapp.com/avatar-decorations/${userData.id}/${userData.avatar_decoration}.png`;
+    }
+
     const userInfo = JSON.stringify({
       id: userData.id,
       username: userData.username,
-      avatarUrl: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png` : null
+      avatarUrl: userData.avatar ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.${userData.avatar.startsWith('a_') ? 'gif' : 'png'}` : null,
+      avatarDecorationUrl: decoUrl
     });
     
     res.redirect(`${FRONTEND_URL}/#auth=${encodeURIComponent(userInfo)}`);
@@ -173,6 +183,37 @@ io.on('connection', (socket) => {
     if (user) {
       user.skin = skin;
       io.emit('virtual_world_event', { type: 'USER_SKIN_UPDATE', data: { userId, skin } });
+    }
+  });
+
+  // Récupérer le profil complet d'un utilisateur Discord
+  socket.on('REQUEST_PROFILE', async (userId) => {
+    try {
+      const response = await fetch(`https://discord.com/api/v10/users/${userId}`, {
+        headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch user');
+      const data = await response.json();
+      
+      let decoUrl = null;
+      if (data.avatar_decoration_data && data.avatar_decoration_data.asset) {
+        decoUrl = `https://cdn.discordapp.com/avatar-decoration-presets/${data.avatar_decoration_data.asset}.png`;
+      } else if (data.avatar_decoration) {
+        decoUrl = `https://cdn.discordapp.com/avatar-decorations/${data.id}/${data.avatar_decoration}.png`;
+      }
+      
+      socket.emit('PROFILE_DATA', {
+        id: data.id,
+        username: data.global_name || data.username,
+        clanTag: data.clan ? data.clan.tag : null,
+        avatarUrl: data.avatar ? `https://cdn.discordapp.com/avatars/${data.id}/${data.avatar}.${data.avatar.startsWith('a_') ? 'gif' : 'png'}?size=256` : null,
+        avatarDecorationUrl: decoUrl,
+        bannerUrl: data.banner ? `https://cdn.discordapp.com/banners/${data.id}/${data.banner}.${data.banner.startsWith('a_') ? 'gif' : 'png'}?size=512` : null,
+        bannerColor: data.banner_color || '#1e1f22', // default discord dark color
+        badges: data.public_flags // you could parse this
+      });
+    } catch (e) {
+      console.error('Erreur lors de la récupération du profil:', e);
     }
   });
 

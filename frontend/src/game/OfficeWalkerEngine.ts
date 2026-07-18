@@ -711,7 +711,7 @@ class Player {
   spriteW: number; spriteH: number; speed: number;
   dir: string; moving: boolean; animTime: number; frame: number;
   currentZoneName: string | null;
-  user: any; socket: any; avatarImg: HTMLImageElement | null;
+  user: any; socket: any; avatarImg: HTMLImageElement | null; avatarDecoImg: HTMLImageElement | null = null;
   lastEmit: number;
   spotify: any | null;
   game: any | null;
@@ -734,16 +734,27 @@ class Player {
     this.user = user;
     this.socket = socket;
     this.avatarImg = null;
+    this.avatarDecoImg = null;
     this.lastEmit = 0;
     this.spotify = null;
     this.game = null;
     this.skin = user?.skin || null;
 
-    if (user && user.avatarUrl && user.id !== 'spectator') {
-      const img = new Image();
-      img.src = user.avatarUrl;
-      img.crossOrigin = "Anonymous";
-      img.onload = () => { this.avatarImg = img; };
+    console.log("Player User Object:", user);
+
+    if (user && user.id !== 'spectator') {
+      if (user.avatarUrl) {
+        const img = new Image();
+        img.src = user.avatarUrl;
+        img.crossOrigin = "Anonymous";
+        img.onload = () => { this.avatarImg = img; };
+      }
+      if (user.avatarDecorationUrl) {
+        const decoImg = new Image();
+        decoImg.src = user.avatarDecorationUrl;
+        decoImg.crossOrigin = "Anonymous";
+        decoImg.onload = () => { this.avatarDecoImg = decoImg; };
+      }
     }
   }
 
@@ -945,6 +956,9 @@ class Player {
       ctx.clip();
       ctx.drawImage(this.avatarImg, bgX + 4, cy - 12, avatarSize, avatarSize);
       ctx.restore();
+      if (this.avatarDecoImg) {
+        ctx.drawImage(this.avatarDecoImg, bgX + 4 - 2, cy - 12 - 2, avatarSize + 4, avatarSize + 4);
+      }
       textStartX = bgX + 4 + avatarSize + 4 + textW / 2;
     }
 
@@ -1045,7 +1059,7 @@ class RemotePlayer {
   targetX: number; targetY: number;
   spriteW: number; spriteH: number; speed: number;
   dir: string; moving: boolean; animTime: number; frame: number;
-  username: string; avatarUrl: string; avatarImg: HTMLImageElement | null;
+  username: string; avatarUrl: string; avatarImg: HTMLImageElement | null; avatarDecoImg: HTMLImageElement | null = null;
   spotify: any | null;
   game: any | null;
   chatMessage: string | null = null;
@@ -1053,7 +1067,7 @@ class RemotePlayer {
   skin: any = null;
   sprites: any = null;
 
-  constructor(id: string, x: number, y: number, username: string, avatarUrl: string, skin?: any) {
+  constructor(id: string, x: number, y: number, username: string, avatarUrl: string, avatarDecorationUrl?: string, skin?: any) {
     this.id = id;
     this.hw = 28; this.hh = 18;
     this.x = x; this.y = y; 
@@ -1076,6 +1090,13 @@ class RemotePlayer {
       img.src = avatarUrl;
       img.crossOrigin = "Anonymous";
       img.onload = () => { this.avatarImg = img; };
+    }
+    
+    if (avatarDecorationUrl) {
+      const decoImg = new Image();
+      decoImg.src = avatarDecorationUrl;
+      decoImg.crossOrigin = "Anonymous";
+      decoImg.onload = () => { this.avatarDecoImg = decoImg; };
     }
   }
 
@@ -1202,6 +1223,9 @@ class RemotePlayer {
       ctx.clip();
       ctx.drawImage(this.avatarImg, bgX + 4, cy - 12, avatarSize, avatarSize);
       ctx.restore();
+      if (this.avatarDecoImg) {
+        ctx.drawImage(this.avatarDecoImg, bgX + 4 - 2, cy - 12 - 2, avatarSize + 4, avatarSize + 4);
+      }
       textStartX = bgX + 4 + avatarSize + 4 + textW / 2;
     }
 
@@ -1391,12 +1415,40 @@ export class OfficeGame {
       if (onRoomChange) onRoomChange(z);
     });
 
+    this.canvas.addEventListener('click', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const scaleX = this.viewW / rect.width;
+      const scaleY = this.viewH / rect.height;
+      const clickX = (e.clientX - rect.left) * scaleX + this.camera.x;
+      const clickY = (e.clientY - rect.top) * scaleY + this.camera.y;
+
+      const allPlayers: any[] = [this.player, ...Array.from(this.remotePlayers.values())];
+      allPlayers.sort((a, b) => (b.y + b.hh) - (a.y + a.hh));
+
+      for (const p of allPlayers) {
+        const cx = p.x + p.hw / 2;
+        const sy = p.y + p.hh;
+        // Sprite visually is approx cx-8 to cx+8, and sy-18 to sy. Adding margin.
+        if (clickX >= cx - 12 && clickX <= cx + 12 &&
+            clickY >= sy - 30 && clickY <= sy + 4) {
+          const userId = p.user ? p.user.id : p.id;
+          if (userId && userId !== 'spectator') {
+            // Calculer les coordonnées sur l'écran
+            const screenX = (cx - this.camera.x) / scaleX + rect.left;
+            const screenY = (sy - this.camera.y) / scaleY + rect.top;
+            this.bus.emit('player_clicked', { userId, x: screenX, y: screenY });
+            break;
+          }
+        }
+      }
+    });
+
     // Écoute les mouvements X,Y des autres joueurs
     socket.on('player_move_xy', (data: any) => {
       if (currentUser && data.userId === currentUser.id) return; // Ignore nos propres mouvements
       let rp = this.remotePlayers.get(data.userId);
       if (!rp) {
-        rp = new RemotePlayer(data.userId, data.x, data.y, data.username, data.avatarUrl, data.skin);
+        rp = new RemotePlayer(data.userId, data.x, data.y, data.username, data.avatarUrl, data.avatarDecorationUrl, data.skin);
         this.remotePlayers.set(data.userId, rp);
       } else {
         rp.targetX = data.x;
@@ -1417,7 +1469,7 @@ export class OfficeGame {
     this.input.destroy();
   }
 
-  updateRemotePlayer(id: string, username: string, voiceChannelId: string, avatarUrl: string) {
+  updateRemotePlayer(id: string, username: string, voiceChannelId: string, avatarUrl: string, avatarDecorationUrl?: string) {
     // Si ce joueur est NOUS, on ne crée pas de "clone" distant, c'est le Player local qui gère
     if (this.player.user && this.player.user.id === id) return;
 
@@ -1433,7 +1485,7 @@ export class OfficeGame {
     const targetY = (targetZone.y1 + targetZone.y2) / 2 * TILE + (Math.random() * 60 - 30);
 
     if (!rp) {
-      rp = new RemotePlayer(id, targetX, targetY, username, avatarUrl);
+      rp = new RemotePlayer(id, targetX, targetY, username, avatarUrl, avatarDecorationUrl);
       this.remotePlayers.set(id, rp);
     } else {
       rp.targetX = targetX;
@@ -1579,5 +1631,33 @@ export class OfficeGame {
     }
 
     ctx.drawImage(this.vignette, 0, 0);
+  }
+
+  getPlayerScreenCoords(userId: string): { x: number, y: number } | null {
+    let targetPlayer: any = null;
+    if (this.player && this.player.user && this.player.user.id === userId) {
+      targetPlayer = this.player;
+    } else {
+      for (const rp of this.remotePlayers.values()) {
+        if ((rp as any).user && (rp as any).user.id === userId) {
+          targetPlayer = rp;
+          break;
+        }
+      }
+    }
+
+    if (!targetPlayer) return null;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = rect.width / this.viewW;
+    const scaleY = rect.height / this.viewH;
+
+    const cx = targetPlayer.x + targetPlayer.hw / 2;
+    const sy = targetPlayer.y + targetPlayer.hh;
+
+    const screenX = (cx - this.camera.x) * scaleX + rect.left;
+    const screenY = (sy - this.camera.y) * scaleY + rect.top;
+
+    return { x: screenX, y: screenY };
   }
 }
