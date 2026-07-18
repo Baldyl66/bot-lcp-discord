@@ -308,7 +308,7 @@ class Assets {
       Px.circle(ctx, w / 2 - 2, h - 2, 4, '#f00'); 
     });
 
-    add('arcade2x1', 2, 1, (ctx: any, w: number, h: number) => {
+    add('arcade2x1', 2, 1, (ctx: any, _w: number, h: number) => {
       Px.rect(ctx, 2, 0, 12, h-2, '#222');
       Px.rect(ctx, 4, 0, 8, 4, '#f00'); 
       Px.rect(ctx, 4, 4, 8, 4, '#0ff'); 
@@ -329,7 +329,7 @@ class Assets {
       Px.rect(ctx, 19, 2, 6, 6, '#111');
     });
 
-    add('tv2x1', 2, 1, (ctx: any, w: number, h: number) => {
+    add('tv2x1', 2, 1, (ctx: any, w: number, _h: number) => {
       Px.rect(ctx, 2, 6, w - 4, 4, '#222'); 
       Px.rect(ctx, 4, 4, w - 8, 2, '#111'); 
       Px.rect(ctx, 2, 0, w - 4, 4, '#000'); 
@@ -1006,7 +1006,7 @@ class HUD {
     this.hudEl.classList.add('pulse');
   }
 
-  drawMinimap(map: any, player: any) {
+  drawMinimap(_map: any, _player: any) {
     // Minimap disabled
   }
 
