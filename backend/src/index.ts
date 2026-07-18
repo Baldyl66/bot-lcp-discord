@@ -102,9 +102,16 @@ app.post('/api/bot/events', (req, res) => {
     }
   }
 
-  // Diffuse uniquement l'événement Spotify au Frontend via Socket.IO
-  // Les events de connexion vocale sont ignorés pour l'affichage web
-  if (type === 'USER_SPOTIFY_UPDATE') {
+  if (type === 'USER_GAME_UPDATE') {
+    if (activeUsers.has(data.userId)) {
+      const user = activeUsers.get(data.userId);
+      user.game = data.game;
+      activeUsers.set(data.userId, user);
+    }
+  }
+
+  // Diffuse les événements utiles au Frontend via Socket.IO
+  if (type === 'USER_SPOTIFY_UPDATE' || type === 'USER_GAME_UPDATE' || type === 'CHAT_MESSAGE_RECEIVED') {
     io.emit('virtual_world_event', { type, data });
   }
   
@@ -143,12 +150,30 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('player_move_xy', data);
   });
 
-  // Événement quand l'avatar franchit la porte d'une salle
+  // Événement quand l'avatar franchit la porte d'une salle vocale
   socket.on('request_move_room', (data) => {
     // data: { userId, channelId }
-    console.log(`Le Web a demandé à bouger ${data.userId} vers ${data.channelId}`);
+    console.log(`Le Web a demandé à bouger ${data.userId} vers vocal ${data.channelId}`);
     // On l'envoie à TOUT LE MONDE (donc le Bot qui écoute aussi va le recevoir et exécuter l'action Discord)
     io.emit('MOVE_USER_DISCORD', data);
+  });
+
+  // Relais d'un message chat du Web vers le Bot
+  socket.on('SEND_CHAT_MESSAGE', (data) => {
+    console.log(`Le Web a envoyé un message texte pour ${data.channelId}: ${data.content}`);
+    // On relaie au bot pour exécution
+    io.emit('DISCORD_SEND_WEBHOOK_MESSAGE', data);
+  });
+
+  // Mise à jour de la couleur/skin
+  socket.on('UPDATE_SKIN', (skin) => {
+    const userId = socketUserMap.get(socket.id);
+    if (!userId) return;
+    const user = activeUsers.get(userId);
+    if (user) {
+      user.skin = skin;
+      io.emit('virtual_world_event', { type: 'USER_SKIN_UPDATE', data: { userId, skin } });
+    }
   });
 
   socket.on('web_connect', (data) => {

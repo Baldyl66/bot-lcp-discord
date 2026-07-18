@@ -333,11 +333,58 @@ backendSocket.on("MOVE_USER_DISCORD", async ({ userId, channelId }) => {
     if (member && member.voice.channel) {
       if (member.voice.channel.id !== channelId) {
         await member.voice.setChannel(channelId);
-        console.log(`[Virtual World] Ordre exécuté : ${member.user.username} déplacé -> ${channelId}`);
+        console.log(`[Virtual World] Ordre exécuté : ${member.user.username} déplacé -> vocal ${channelId}`);
       }
     }
   } catch (e) {
     console.error("[Virtual World] Erreur lors du déplacement Discord:", e.message);
+  }
+});
+
+backendSocket.on("DISCORD_SEND_WEBHOOK_MESSAGE", async ({ userId, username, avatarUrl, channelId, content }) => {
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (!channel || !channel.isTextBased()) return;
+
+    // Cherche s'il existe déjà un Webhook nommé "Office Walker Bridge"
+    const webhooks = await channel.fetchWebhooks();
+    let webhook = webhooks.find(wh => wh.name === 'Office Walker Bridge');
+    
+    // Sinon on le crée
+    if (!webhook) {
+      webhook = await channel.createWebhook({
+        name: 'Office Walker Bridge',
+        avatar: 'https://i.imgur.com/AfFp7pu.png', // Icône générique pour le bot bridge
+      });
+    }
+
+    await webhook.send({
+      content: content,
+      username: username,
+      avatarURL: avatarUrl,
+    });
+    console.log(`[Virtual World] Message relayé via Webhook dans #${channel.name}`);
+  } catch (error) {
+    console.error("[Virtual World] Erreur envoi Webhook:", error);
+  }
+});
+
+// === ÉCOUTE DES NOUVEAUX MESSAGES SUR DISCORD ===
+client.on(Events.MessageCreate, async (message) => {
+  try {
+    if (message.guildId !== VIRTUAL_WORLD_GUILD_ID) return;
+    
+    // Ignorer les messages de bots, sauf si c'est notre bridge webhook (optionnel)
+    if (message.author.bot) return;
+
+    // Envoi au backend
+    await sendVirtualWorldEvent("CHAT_MESSAGE_RECEIVED", {
+      userId: message.author.id,
+      channelId: message.channel.id,
+      content: message.content,
+    });
+  } catch(e) {
+    console.error(e);
   }
 });
 
@@ -435,6 +482,36 @@ client.on(Events.PresenceUpdate, async (oldPresence, newPresence) => {
         await sendVirtualWorldEvent("USER_SPOTIFY_UPDATE", {
           userId: member.id,
           spotify: null
+        });
+      }
+    }
+
+    // --- GESTION DU JEU (Rich Presence) ---
+    const gameActivity = newPresence.activities.find(a => a.type === 0 && a.name !== 'Spotify' && a.name !== 'Custom Status');
+    if (gameActivity) {
+      let gameArt = null;
+      if (gameActivity.assets && gameActivity.assets.largeImage && gameActivity.applicationId) {
+        const largeImage = gameActivity.assets.largeImage;
+        if (largeImage.startsWith('mp:external/')) {
+          gameArt = `https://media.discordapp.net/external/${largeImage.slice(12)}`;
+        } else {
+          gameArt = `https://cdn.discordapp.com/app-assets/${gameActivity.applicationId}/${largeImage}.png`;
+        }
+      } else if (gameActivity.applicationId) {
+        // Fallback: Si le jeu n'a pas d'asset Rich Presence configuré, on utilise l'icône officielle de l'application via un proxy public (dstn.to)
+        gameArt = `https://dcdn.dstn.to/app-icons/${gameActivity.applicationId}`;
+      }
+      
+      await sendVirtualWorldEvent("USER_GAME_UPDATE", {
+        userId: member.id,
+        game: { name: gameActivity.name, art: gameArt }
+      });
+    } else {
+      const hadGame = oldPresence?.activities.some(a => a.type === 0 && a.name !== 'Spotify' && a.name !== 'Custom Status');
+      if (hadGame) {
+        await sendVirtualWorldEvent("USER_GAME_UPDATE", {
+          userId: member.id,
+          game: null
         });
       }
     }

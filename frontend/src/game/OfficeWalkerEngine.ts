@@ -53,7 +53,8 @@ class Assets {
     this._buildWall();
     this._buildRug();
     this._buildFurniture();
-    this._buildPlayer();
+    // Default fallback sprites for global
+    this.player = this.generatePlayerSprites();
   }
 
   _buildFloors() {
@@ -349,42 +350,125 @@ class Assets {
     });
   }
 
-  _buildPlayer() {
-    const SKIN = '#e0a878', HAIR = '#3a2a1e', SHIRT = '#3aa0ff', SHIRT_D = '#2b7cc9', PANTS = '#25324a';
+  generatePlayerSprites(skinOptions?: { shirt: string, pants: string }) {
+    const SKIN = '#e0a878', HAIR = '#3a2a1e';
+    const SHIRT = skinOptions?.shirt || '#3aa0ff';
+    const PANTS = skinOptions?.pants || '#25324a';
+    
+    const darken = (hex: string) => {
+      if (!hex.startsWith('#')) return hex;
+      let r = parseInt(hex.slice(1,3), 16) * 0.8;
+      let g = parseInt(hex.slice(3,5), 16) * 0.8;
+      let b = parseInt(hex.slice(5,7), 16) * 0.8;
+      return '#' + Math.floor(r).toString(16).padStart(2,'0') + Math.floor(g).toString(16).padStart(2,'0') + Math.floor(b).toString(16).padStart(2,'0');
+    };
+    const SHIRT_D = darken(SHIRT);
     const W = 16, H = 24;
 
-    const base = (ctx: any, dir: string) => {
+    const base = (ctx: any, dir: string, stride: number) => {
+      // Arms logic
+      const leftArmY = 12 + (dir !== 'left' && dir !== 'right' ? Math.max(0, stride) : 0);
+      const rightArmY = 12 + (dir !== 'left' && dir !== 'right' ? Math.max(0, -stride) : 0);
+
       if (dir === 'down' || dir === 'up') {
+        // Head base
         Px.circle(ctx, 8, 6, 5, dir === 'up' ? HAIR : SKIN);
-        if (dir === 'up') Px.rect(ctx, 4, 3, 8, 5, HAIR);
-        else { Px.rect(ctx, 3, 2, 10, 4, HAIR); Px.rect(ctx, 6, 6, 1, 1, '#1c1c1c'); Px.rect(ctx, 9, 6, 1, 1, '#1c1c1c'); }
-        Px.rect(ctx, 3, 11, 10, 7, SHIRT);
-        Px.rect(ctx, 3, 11, 10, 2, SHIRT_D);
-        Px.rect(ctx, 1, 12, 2, 5, SHIRT_D);
-        Px.rect(ctx, 13, 12, 2, 5, SHIRT_D);
-      } else {
-        Px.circle(ctx, 8, 6, 5, SKIN);
-        Px.rect(ctx, 3, 2, 10, 4, HAIR);
-        Px.rect(ctx, dir === 'left' ? 4 : 9, 6, 1, 1, '#1c1c1c');
+        Px.rect(ctx, 5, 3, 3, 2, 'rgba(255,255,255,0.15)'); // Highlight head
+
+        // Hair
+        if (dir === 'up') {
+          Px.rect(ctx, 4, 2, 8, 5, HAIR);
+          Px.rect(ctx, 5, 1, 6, 1, HAIR); // Round top
+        } else { 
+          Px.rect(ctx, 4, 1, 8, 4, HAIR); 
+          Px.rect(ctx, 3, 3, 1, 2, HAIR); // Sideburns
+          Px.rect(ctx, 12, 3, 1, 2, HAIR); 
+          // Eyes
+          Px.rect(ctx, 5, 6, 2, 1, '#1c1c1c'); 
+          Px.rect(ctx, 9, 6, 2, 1, '#1c1c1c'); 
+          // Mouth
+          Px.rect(ctx, 7, 8, 2, 1, '#8a5a3b');
+        }
+        
+        // Torso
         Px.rect(ctx, 4, 11, 8, 7, SHIRT);
         Px.rect(ctx, 4, 11, 8, 2, SHIRT_D);
-        Px.rect(ctx, dir === 'left' ? 10 : 2, 12, 2, 5, SHIRT_D);
+
+        // Arms (swinging)
+        Px.rect(ctx, 1, leftArmY, 3, 4, SHIRT_D); // Left arm
+        Px.rect(ctx, 2, leftArmY + 4, 2, 2, SKIN); // Left hand
+        
+        Px.rect(ctx, 12, rightArmY, 3, 4, SHIRT_D); // Right arm
+        Px.rect(ctx, 12, rightArmY + 4, 2, 2, SKIN); // Right hand
+        
+        if (dir === 'down') Px.rect(ctx, 5, 13, 4, 3, 'rgba(255,255,255,0.15)'); // Highlight chest
+      } else {
+        // Head
+        Px.circle(ctx, 8, 6, 5, SKIN);
+        
+        // Hair for side views
+        if (dir === 'left') {
+           Px.rect(ctx, 5, 2, 8, 4, HAIR); // Top
+           Px.rect(ctx, 9, 4, 4, 5, HAIR); // Back (right side)
+           Px.rect(ctx, 6, 1, 6, 2, HAIR); // Top round
+        } else {
+           Px.rect(ctx, 3, 2, 8, 4, HAIR); // Top
+           Px.rect(ctx, 3, 4, 4, 5, HAIR); // Back (left side)
+           Px.rect(ctx, 4, 1, 6, 2, HAIR); // Top round
+        }
+        
+        Px.rect(ctx, dir === 'left' ? 4 : 9, 3, 3, 2, 'rgba(255,255,255,0.15)'); // Highlight head
+
+        // Eye
+        Px.rect(ctx, dir === 'left' ? 4 : 10, 6, 2, 1, '#1c1c1c');
+        
+        // Torso
+        Px.rect(ctx, 5, 11, 6, 7, SHIRT);
+        Px.rect(ctx, 5, 11, 6, 2, SHIRT_D);
+        
+        // Arm (only one visible, swinging)
+        const armY = 12 + Math.abs(stride);
+        Px.rect(ctx, dir === 'left' ? 7 : 5, armY, 4, 4, SHIRT_D);
+        Px.rect(ctx, dir === 'left' ? 8 : 6, armY + 4, 2, 2, SKIN); // Hand
+        
+        Px.rect(ctx, dir === 'left' ? 5 : 9, 13, 2, 4, 'rgba(255,255,255,0.15)'); // Highlight chest side
       }
     };
+
+    const sprites: any = { down: [], up: [], left: [], right: [] };
 
     ['down', 'up', 'left', 'right'].forEach(dir => {
       for (let f = 0; f < 4; f++) {
         const { c, ctx } = Px.canvas(W, H);
-        base(ctx, dir);
         const stride = [0, 2, 0, -2][f];
-        Px.rect(ctx, 4, 18 + (f % 2 === 1 ? Math.abs(stride) * 0 : 0), 3, 5 - stride * 0, PANTS);
-        Px.rect(ctx, 4, 18 - Math.max(0, stride), 3, 6, PANTS);
-        Px.rect(ctx, 9, 18 - Math.max(0, -stride), 3, 6, PANTS);
-        Px.rect(ctx, 4, 23, 3, 1, '#111');
-        Px.rect(ctx, 9, 23, 3, 1, '#111');
-        this.player[dir].push(c);
+        base(ctx, dir, stride);
+        
+        const leftLegY = 18 - Math.max(0, stride);
+        const rightLegY = 18 - Math.max(0, -stride);
+
+        if (dir === 'left' || dir === 'right') {
+          // One leg in front of the other
+          Px.rect(ctx, 6, leftLegY, 4, 5, PANTS); // Back leg
+          Px.rect(ctx, 6, rightLegY, 4, 5, PANTS); // Front leg
+          Px.rect(ctx, 6, leftLegY + 5, 4, 1, '#111');
+          Px.rect(ctx, 6, rightLegY + 5, 4, 1, '#111');
+        } else {
+          // Normal pants
+          Px.rect(ctx, 4, leftLegY, 3, 5, PANTS);
+          Px.rect(ctx, 9, rightLegY, 3, 5, PANTS);
+          // Highlight
+          Px.rect(ctx, 5, leftLegY + 1, 1, 3, 'rgba(255,255,255,0.1)');
+          Px.rect(ctx, 10, rightLegY + 1, 1, 3, 'rgba(255,255,255,0.1)');
+          // Shoes
+          Px.rect(ctx, 4, leftLegY + 5, 3, 1, '#111');
+          Px.rect(ctx, 9, rightLegY + 5, 3, 1, '#111');
+        }
+        
+        sprites[dir].push(c);
       }
     });
+
+    return sprites;
   }
 }
 
@@ -396,6 +480,8 @@ class InputManager {
 
   constructor() {
     this.keydown = (e: KeyboardEvent) => {
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
       if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
       this.keys[e.key.toLowerCase()] = true;
     };
@@ -427,13 +513,13 @@ class WorldMap {
     this.furniture = [];
     this.zones = [
       // REMPLACEZ LES 'discord_channel_id' PAR LES VRAIS IDS DE VOS SALONS VOCAUX DISCORD (clic droit -> copier l'ID du salon)
-      { name: 'Open Space',        floorKey: 'openspace',  icon: '💻', channelId: '1459937261981536433', x1: 1,  y1: 1,  x2: 13, y2: 10, accent: '127,179,213' },
-      { name: 'Accueil',           floorKey: 'reception', icon: '🛎️', channelId: 'salon_id_accueil', x1: 14, y1: 1,  x2: 26, y2: 10, accent: '201,168,118' },
-      { name: 'Studio de Musique', floorKey: 'studio',     icon: '🎧', channelId: '1459960696111370433', x1: 27, y1: 1,  x2: 39, y2: 10, accent: '220,100,150' },
-      { name: 'Couloir',           floorKey: 'corridor',   icon: '🚶', channelId: 'salon_id_couloir', x1: 1,  y1: 11, x2: 39, y2: 15, accent: '150,156,168' },
-      { name: 'Voyage (Japon)',    floorKey: 'japan',      icon: '🌸', channelId: 'salon_id_japon', x1: 1,  y1: 16, x2: 13, y2: 23, accent: '240,150,160' },
-      { name: 'Bureau du Manager', floorKey: 'manager',    icon: '👔', channelId: 'salon_id_manager', x1: 14, y1: 16, x2: 26, y2: 23, accent: '127,217,160' },
-      { name: 'Salle Gaming',      floorKey: 'gaming',     icon: '🎮', channelId: 'salon_id_serveurs', x1: 27, y1: 16, x2: 39, y2: 23, accent: '180,50,250' },
+      { name: 'Open Space',        floorKey: 'openspace',  icon: '💻', voiceChannelId: '1459937261981536433', textChannelId: null, x1: 1,  y1: 1,  x2: 13, y2: 10, accent: '127,179,213' },
+      { name: 'Accueil',           floorKey: 'reception', icon: '🛎️', voiceChannelId: null, textChannelId: '1459971801894621256', x1: 14, y1: 1,  x2: 26, y2: 10, accent: '201,168,118' },
+      { name: 'Studio de Musique', floorKey: 'studio',     icon: '🎧', voiceChannelId: '1459960696111370433', textChannelId: null, x1: 27, y1: 1,  x2: 39, y2: 10, accent: '220,100,150' },
+      { name: 'Couloir',           floorKey: 'corridor',   icon: '🚶', voiceChannelId: 'salon_id_couloir', textChannelId: null, x1: 1,  y1: 11, x2: 39, y2: 15, accent: '150,156,168' },
+      { name: 'Voyage (Japon)',    floorKey: 'japan',      icon: '🌸', voiceChannelId: 'salon_id_japon', textChannelId: null, x1: 1,  y1: 16, x2: 13, y2: 23, accent: '240,150,160' },
+      { name: 'Bureau du Manager', floorKey: 'manager',    icon: '👔', voiceChannelId: 'salon_id_manager', textChannelId: null, x1: 14, y1: 16, x2: 26, y2: 23, accent: '127,217,160' },
+      { name: 'Salle Gaming',      floorKey: 'gaming',     icon: '🎮', voiceChannelId: 'salon_id_serveurs', textChannelId: null, x1: 27, y1: 16, x2: 39, y2: 23, accent: '180,50,250' },
     ];
     this._generateLayout();
   }
@@ -621,16 +707,23 @@ class WorldMap {
 /* ================================ PLAYER =================================== */
 class Player {
   hw: number; hh: number; x: number; y: number;
+  vx: number; vy: number;
   spriteW: number; spriteH: number; speed: number;
   dir: string; moving: boolean; animTime: number; frame: number;
   currentZoneName: string | null;
   user: any; socket: any; avatarImg: HTMLImageElement | null;
   lastEmit: number;
   spotify: any | null;
+  game: any | null;
+  chatMessage: string | null = null;
+  chatTimer: number = 0;
+  skin: any = null;
+  sprites: any = null;
 
   constructor(x: number, y: number, user: any, socket: any) {
     this.hw = 28; this.hh = 18;
     this.x = x; this.y = y; 
+    this.vx = 0; this.vy = 0;
     this.spriteW = 16 * SCALE; this.spriteH = 24 * SCALE;
     this.speed = 190;
     this.dir = 'down';
@@ -643,6 +736,8 @@ class Player {
     this.avatarImg = null;
     this.lastEmit = 0;
     this.spotify = null;
+    this.game = null;
+    this.skin = user?.skin || null;
 
     if (user && user.avatarUrl && user.id !== 'spectator') {
       const img = new Image();
@@ -656,29 +751,57 @@ class Player {
   get centerY() { return this.y + this.hh / 2; }
 
   _collides(map: any, x: number, y: number) {
+    if (this.user?.id === 'spectator') {
+      const tc1 = Math.floor(x / 16), tr1 = Math.floor(y / 16);
+      const tc2 = Math.floor((x + this.hw) / 16), tr2 = Math.floor((y + this.hh) / 16);
+      return (tr1 < 0 || tr2 >= map.grid.length || tc1 < 0 || tc2 >= map.grid[0].length);
+    }
     const pts = [[x, y], [x + this.hw, y], [x, y + this.hh], [x + this.hw, y + this.hh]];
     return pts.some(([px, py]) => map.isSolid(px, py));
   }
 
   update(dt: number, input: any, map: any, bus: any) {
-    let dx = 0, dy = 0;
-    if (input.up) dy -= 1;
-    if (input.down) dy += 1;
-    if (input.left) dx -= 1;
-    if (input.right) dx += 1;
+    let inputDx = 0, inputDy = 0;
+    if (input.up) inputDy -= 1;
+    if (input.down) inputDy += 1;
+    if (input.left) inputDx -= 1;
+    if (input.right) inputDx += 1;
 
-    this.moving = dx !== 0 || dy !== 0;
-    if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+    if (inputDx !== 0 && inputDy !== 0) { inputDx *= 0.7071; inputDy *= 0.7071; }
 
-    if (dx > 0) this.dir = 'right';
-    else if (dx < 0) this.dir = 'left';
-    else if (dy > 0) this.dir = 'down';
-    else if (dy < 0) this.dir = 'up';
+    const accel = 1500;
+    const friction = 10;
+    
+    this.vx += inputDx * accel * dt;
+    this.vy += inputDy * accel * dt;
+    
+    this.vx -= this.vx * friction * dt;
+    this.vy -= this.vy * friction * dt;
 
-    const moveX = dx * this.speed * dt;
-    const moveY = dy * this.speed * dt;
+    const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    if (currentSpeed > this.speed) {
+       this.vx = (this.vx / currentSpeed) * this.speed;
+       this.vy = (this.vy / currentSpeed) * this.speed;
+    }
+
+    if (Math.abs(this.vx) < 5) this.vx = 0;
+    if (Math.abs(this.vy) < 5) this.vy = 0;
+
+    this.moving = this.vx !== 0 || this.vy !== 0;
+
+    if (inputDx > 0) this.dir = 'right';
+    else if (inputDx < 0) this.dir = 'left';
+    else if (inputDy > 0) this.dir = 'down';
+    else if (inputDy < 0) this.dir = 'up';
+
+    const moveX = this.vx * dt;
+    const moveY = this.vy * dt;
+    
     if (moveX !== 0 && !this._collides(map, this.x + moveX, this.y)) this.x += moveX;
+    else this.vx = 0;
+    
     if (moveY !== 0 && !this._collides(map, this.x, this.y + moveY)) this.y += moveY;
+    else this.vy = 0;
 
     this.x = Math.max(0, Math.min(WORLD_W - this.hw, this.x));
     this.y = Math.max(0, Math.min(WORLD_H - this.hh, this.y));
@@ -694,15 +817,24 @@ class Player {
           userId: this.user.id,
           username: this.user.username,
           avatarUrl: this.user.avatarUrl,
+          skin: this.skin,
           x: this.x,
           y: this.y,
           dir: this.dir,
           frame: this.frame
         });
         this.lastEmit = now;
+        try { localStorage.setItem('discord_user_pos', JSON.stringify({ x: this.centerX, y: this.centerY })); } catch(e) {}
       }
     } else {
       this.animTime = 0; this.frame = 0;
+    }
+
+    if (this.chatTimer > 0) {
+      this.chatTimer -= dt;
+      if (this.chatTimer <= 0) {
+        this.chatMessage = null;
+      }
     }
 
     const zone = map.zoneAt(this.centerX, this.centerY);
@@ -717,19 +849,32 @@ class Player {
     // Si on est en mode spectateur, on est complètement invisible.
     if (!this.user || this.user.id === 'spectator') return;
 
+    if (!this.sprites) {
+      this.sprites = assets.generatePlayerSprites(this.skin);
+    }
+
     // Sinon, on se dessine normalement (comme un RemotePlayer mais local)
-    const frames = assets.player[this.dir];
+    const frames = this.sprites[this.dir] || assets.player[this.dir];
     const img = frames[this.frame];
+    
+    let bounce = 0;
+    if (this.moving) {
+      bounce = Math.abs(Math.sin(this.animTime * Math.PI * 4)) * 3;
+    } else {
+      bounce = Math.sin(performance.now() / 400) * 1.5;
+    }
+
     const spriteOffsetX = (this.spriteW - this.hw) / 2;
     const spriteOffsetY = this.spriteH - this.hh;
     const sx = this.x - spriteOffsetX - cam.x;
-    const sy = this.y - spriteOffsetY - cam.y;
+    const sy = this.y - spriteOffsetY - cam.y - bounce;
 
     ctx.save();
     ctx.globalAlpha = 0.32;
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.ellipse(this.x + this.hw / 2 - cam.x, this.y + this.hh - cam.y, this.hw / 1.7, 6, 0, 0, Math.PI * 2);
+    const shadowScale = 1 - (Math.max(0, bounce) / 10);
+    ctx.ellipse(this.x + this.hw / 2 - cam.x, this.y + this.hh - cam.y, (this.hw / 1.7) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -742,7 +887,42 @@ class Player {
     const textMetrics = ctx.measureText(name);
     const textW = textMetrics.width;
     const cx = sx + this.spriteW / 2;
-    const cy = this.spotify ? sy - 28 : sy - 14;
+    let extraHeight = 0;
+    if (this.spotify) extraHeight += 18;
+    if (this.game) extraHeight += 18;
+
+    // Dessin de la bulle de chat
+    if (this.chatMessage) {
+      ctx.save();
+      const chatMetrics = ctx.measureText(this.chatMessage);
+      const chatW = chatMetrics.width + 12;
+      const chatH = 20;
+      const chatY = sy - 24 - extraHeight - chatH;
+      const chatX = cx - chatW / 2;
+      
+      // Bulle background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.beginPath();
+      ctx.roundRect(chatX, chatY, chatW, chatH, 8);
+      ctx.fill();
+      
+      // Petit triangle de la bulle
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, chatY + chatH);
+      ctx.lineTo(cx + 5, chatY + chatH);
+      ctx.lineTo(cx, chatY + chatH + 5);
+      ctx.fill();
+
+      // Texte du chat
+      ctx.fillStyle = '#fff';
+      ctx.font = '11px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(this.chatMessage, chatX + 6, chatY + 14);
+      ctx.restore();
+
+      extraHeight += chatH + 10;
+    }
+
+    const cy = sy - 14 - extraHeight;
     
     // Background du pseudo (avec bordure verte pour signaler "Moi")
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
@@ -773,19 +953,60 @@ class Player {
     ctx.textAlign = 'center';
     ctx.fillText(name, textStartX, cy - 1);
 
+    let currentY = cy + 8;
+
+    // Game
+    if (this.game) {
+      ctx.font = 'bold 9px "Segoe UI", Arial, sans-serif';
+      const gameText = `Joue à ${this.game.name}`;
+      const gTextW = ctx.measureText(gameText).width;
+      
+      const gBgW = gTextW + 30; // 16 padding + 14 for icon
+      const gBgX = cx - gBgW / 2;
+
+      ctx.fillStyle = '#5865F2'; // Discord blurple
+      ctx.beginPath();
+      ctx.roundRect(gBgX, currentY, gBgW, 16, 8);
+      ctx.fill();
+
+      if (this.game.art && this.game.artImg === undefined) {
+         this.game.artImg = null;
+         const img = new Image();
+         img.src = this.game.art;
+         img.crossOrigin = "Anonymous";
+         img.onload = () => { this.game.artImg = img; };
+      }
+
+      if (this.game.artImg) {
+         ctx.save();
+         ctx.beginPath();
+         ctx.arc(gBgX + 8, currentY + 8, 6, 0, Math.PI * 2);
+         ctx.clip();
+         ctx.drawImage(this.game.artImg, gBgX + 2, currentY + 2, 12, 12);
+         ctx.restore();
+      } else {
+         ctx.fillStyle = '#ffffff';
+         ctx.fillText('🎮', gBgX + 8, currentY + 11);
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(gameText, cx + 7, currentY + 11);
+      
+      currentY += 18;
+    }
+
     // Spotify
     if (this.spotify) {
       ctx.font = 'bold 9px "Segoe UI", Arial, sans-serif';
       const spText = `${this.spotify.song} - ${this.spotify.artist}`;
-      const textW = ctx.measureText(spText).width;
+      const spTextW = ctx.measureText(spText).width;
       
-      const spBgW = textW + 30; // 16 padding + 14 for icon
+      const spBgW = spTextW + 30; // 16 padding + 14 for icon
       const spBgX = cx - spBgW / 2;
-      const spBgY = cy + 8; // More space below username
 
       ctx.fillStyle = '#1DB954';
       ctx.beginPath();
-      ctx.roundRect(spBgX, spBgY, spBgW, 16, 8);
+      ctx.roundRect(spBgX, currentY, spBgW, 16, 8);
       ctx.fill();
 
       if (this.spotify.albumArt && this.spotify.albumImg === undefined) {
@@ -799,17 +1020,19 @@ class Player {
       if (this.spotify.albumImg) {
          ctx.save();
          ctx.beginPath();
-         ctx.arc(spBgX + 8, spBgY + 8, 6, 0, Math.PI * 2);
+         ctx.arc(spBgX + 8, currentY + 8, 6, 0, Math.PI * 2);
          ctx.clip();
-         ctx.drawImage(this.spotify.albumImg, spBgX + 2, spBgY + 2, 12, 12);
+         ctx.drawImage(this.spotify.albumImg, spBgX + 2, currentY + 2, 12, 12);
          ctx.restore();
       } else {
          ctx.fillStyle = '#ffffff';
-         ctx.fillText('🎵', spBgX + 8, spBgY + 11);
+         ctx.fillText('🎵', spBgX + 8, currentY + 11);
       }
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(spText, cx + 7, spBgY + 11);
+      ctx.fillText(spText, cx + 7, currentY + 11);
+      
+      currentY += 18;
     }
     
     ctx.restore();
@@ -824,8 +1047,13 @@ class RemotePlayer {
   dir: string; moving: boolean; animTime: number; frame: number;
   username: string; avatarUrl: string; avatarImg: HTMLImageElement | null;
   spotify: any | null;
+  game: any | null;
+  chatMessage: string | null = null;
+  chatTimer: number = 0;
+  skin: any = null;
+  sprites: any = null;
 
-  constructor(id: string, x: number, y: number, username: string, avatarUrl: string) {
+  constructor(id: string, x: number, y: number, username: string, avatarUrl: string, skin?: any) {
     this.id = id;
     this.hw = 28; this.hh = 18;
     this.x = x; this.y = y; 
@@ -840,6 +1068,8 @@ class RemotePlayer {
     this.avatarUrl = avatarUrl;
     this.avatarImg = null;
     this.spotify = null;
+    this.game = null;
+    this.skin = skin || null;
 
     if (avatarUrl) {
       const img = new Image();
@@ -871,21 +1101,40 @@ class RemotePlayer {
     } else {
       this.animTime = 0; this.frame = 0;
     }
+
+    if (this.chatTimer > 0) {
+      this.chatTimer -= dt;
+      if (this.chatTimer <= 0) {
+        this.chatMessage = null;
+      }
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D, cam: any, assets: any) {
-    const frames = assets.player[this.dir];
+    if (!this.sprites) {
+      this.sprites = assets.generatePlayerSprites(this.skin);
+    }
+    const frames = this.sprites[this.dir] || assets.player[this.dir];
     const img = frames[this.frame];
+    
+    let bounce = 0;
+    if (this.moving) {
+      bounce = Math.abs(Math.sin(this.animTime * Math.PI * 4)) * 3;
+    } else {
+      bounce = Math.sin(performance.now() / 400) * 1.5;
+    }
+
     const spriteOffsetX = (this.spriteW - this.hw) / 2;
     const spriteOffsetY = this.spriteH - this.hh;
     const sx = this.x - spriteOffsetX - cam.x;
-    const sy = this.y - spriteOffsetY - cam.y;
+    const sy = this.y - spriteOffsetY - cam.y - bounce;
 
     ctx.save();
     ctx.globalAlpha = 0.32;
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.ellipse(this.x + this.hw / 2 - cam.x, this.y + this.hh - cam.y, this.hw / 1.7, 6, 0, 0, Math.PI * 2);
+    const shadowScale = 1 - (Math.max(0, bounce) / 10);
+    ctx.ellipse(this.x + this.hw / 2 - cam.x, this.y + this.hh - cam.y, (this.hw / 1.7) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -898,7 +1147,42 @@ class RemotePlayer {
     const textMetrics = ctx.measureText(name);
     const textW = textMetrics.width;
     const cx = sx + this.spriteW / 2;
-    const cy = this.spotify ? sy - 28 : sy - 14;
+    let extraHeight = 0;
+    if (this.spotify) extraHeight += 18;
+    if (this.game) extraHeight += 18;
+
+    // Dessin de la bulle de chat
+    if (this.chatMessage) {
+      ctx.save();
+      const chatMetrics = ctx.measureText(this.chatMessage);
+      const chatW = chatMetrics.width + 12;
+      const chatH = 20;
+      const chatY = sy - 24 - extraHeight - chatH;
+      const chatX = cx - chatW / 2;
+      
+      // Bulle background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.beginPath();
+      ctx.roundRect(chatX, chatY, chatW, chatH, 8);
+      ctx.fill();
+      
+      // Petit triangle de la bulle
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, chatY + chatH);
+      ctx.lineTo(cx + 5, chatY + chatH);
+      ctx.lineTo(cx, chatY + chatH + 5);
+      ctx.fill();
+
+      // Texte du chat
+      ctx.fillStyle = '#fff';
+      ctx.font = '11px "Segoe UI", Arial, sans-serif';
+      ctx.fillText(this.chatMessage, chatX + 6, chatY + 14);
+      ctx.restore();
+
+      extraHeight += chatH + 10;
+    }
+
+    const cy = sy - 14 - extraHeight;
     
     // Background du pseudo
     ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
@@ -926,19 +1210,60 @@ class RemotePlayer {
     ctx.textAlign = 'center';
     ctx.fillText(name, textStartX, cy - 1);
 
+    let currentY = cy + 8;
+
+    // Game
+    if (this.game) {
+      ctx.font = 'bold 9px "Segoe UI", Arial, sans-serif';
+      const gameText = `Joue à ${this.game.name}`;
+      const gTextW = ctx.measureText(gameText).width;
+      
+      const gBgW = gTextW + 30; 
+      const gBgX = cx - gBgW / 2;
+
+      ctx.fillStyle = '#5865F2';
+      ctx.beginPath();
+      ctx.roundRect(gBgX, currentY, gBgW, 16, 8);
+      ctx.fill();
+
+      if (this.game.art && this.game.artImg === undefined) {
+         this.game.artImg = null;
+         const img = new Image();
+         img.src = this.game.art;
+         img.crossOrigin = "Anonymous";
+         img.onload = () => { this.game.artImg = img; };
+      }
+
+      if (this.game.artImg) {
+         ctx.save();
+         ctx.beginPath();
+         ctx.arc(gBgX + 8, currentY + 8, 6, 0, Math.PI * 2);
+         ctx.clip();
+         ctx.drawImage(this.game.artImg, gBgX + 2, currentY + 2, 12, 12);
+         ctx.restore();
+      } else {
+         ctx.fillStyle = '#ffffff';
+         ctx.fillText('🎮', gBgX + 8, currentY + 11);
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(gameText, cx + 7, currentY + 11);
+      
+      currentY += 18;
+    }
+
     // Spotify
     if (this.spotify) {
       ctx.font = 'bold 9px "Segoe UI", Arial, sans-serif';
       const spText = `${this.spotify.song} - ${this.spotify.artist}`;
-      const textW = ctx.measureText(spText).width;
+      const spTextW = ctx.measureText(spText).width;
       
-      const spBgW = textW + 30; // 16 padding + 14 for icon
+      const spBgW = spTextW + 30; // 16 padding + 14 for icon
       const spBgX = cx - spBgW / 2;
-      const spBgY = cy + 8; // More space below username
 
       ctx.fillStyle = '#1DB954';
       ctx.beginPath();
-      ctx.roundRect(spBgX, spBgY, spBgW, 16, 8);
+      ctx.roundRect(spBgX, currentY, spBgW, 16, 8);
       ctx.fill();
 
       if (this.spotify.albumArt && this.spotify.albumImg === undefined) {
@@ -952,17 +1277,19 @@ class RemotePlayer {
       if (this.spotify.albumImg) {
          ctx.save();
          ctx.beginPath();
-         ctx.arc(spBgX + 8, spBgY + 8, 6, 0, Math.PI * 2);
+         ctx.arc(spBgX + 8, currentY + 8, 6, 0, Math.PI * 2);
          ctx.clip();
-         ctx.drawImage(this.spotify.albumImg, spBgX + 2, spBgY + 2, 12, 12);
+         ctx.drawImage(this.spotify.albumImg, spBgX + 2, currentY + 2, 12, 12);
          ctx.restore();
       } else {
          ctx.fillStyle = '#ffffff';
-         ctx.fillText('🎵', spBgX + 8, spBgY + 11);
+         ctx.fillText('🎵', spBgX + 8, currentY + 11);
       }
 
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(spText, cx + 7, spBgY + 11);
+      ctx.fillText(spText, cx + 7, currentY + 11);
+      
+      currentY += 18;
     }
     
     ctx.restore();
@@ -1043,7 +1370,17 @@ export class OfficeGame {
     this.bus = new EventBus();
 
     const startTileRow = 13, startTileCol = 20;
-    const cx = startTileCol * TILE + TILE / 2, cy = startTileRow * TILE + TILE / 2;
+    let cx = startTileCol * TILE + TILE / 2, cy = startTileRow * TILE + TILE / 2;
+    try {
+      const saved = localStorage.getItem('discord_user_pos');
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (typeof p.x === 'number' && typeof p.y === 'number') {
+          cx = p.x; cy = p.y;
+        }
+      }
+    } catch(e) {}
+
     this.player = new Player(cx - 14, cy - 9, currentUser, socket);
     this.camera.x = Math.max(0, Math.min(WORLD_W - this.viewW, cx - this.viewW / 2));
     this.camera.y = Math.max(0, Math.min(WORLD_H - this.viewH, cy - this.viewH / 2));
@@ -1059,7 +1396,7 @@ export class OfficeGame {
       if (currentUser && data.userId === currentUser.id) return; // Ignore nos propres mouvements
       let rp = this.remotePlayers.get(data.userId);
       if (!rp) {
-        rp = new RemotePlayer(data.userId, data.x, data.y, data.username, data.avatarUrl);
+        rp = new RemotePlayer(data.userId, data.x, data.y, data.username, data.avatarUrl, data.skin);
         this.remotePlayers.set(data.userId, rp);
       } else {
         rp.targetX = data.x;
@@ -1072,47 +1409,15 @@ export class OfficeGame {
     this.lastTime = performance.now();
     this.fpsAccum = 0; this.fpsFrames = 0;
 
-    this.onClick = this.onClick.bind(this);
-    this.canvas.addEventListener('click', this.onClick);
-
     requestAnimationFrame(t => this._loop(t));
   }
 
   destroy() {
     this.running = false;
     this.input.destroy();
-    this.canvas.removeEventListener('click', this.onClick);
   }
 
-  onClick(e: MouseEvent) {
-    const rect = this.canvas.getBoundingClientRect();
-    // Gérer l'échelle si le canvas est redimensionné via CSS
-    const scaleX = this.canvas.width / rect.width;
-    const scaleY = this.canvas.height / rect.height;
-    
-    const cx = (e.clientX - rect.left) * scaleX;
-    const cy = (e.clientY - rect.top) * scaleY;
-
-    const players = [this.player, ...Array.from(this.remotePlayers.values())];
-    
-    for (const p of players) {
-      if (!p) continue;
-      const id = (p as any).userId || (p as any).user?.id;
-      if (!id || id === 'spectator') continue;
-
-      const spriteOffsetX = (p.spriteW - p.hw) / 2;
-      const spriteOffsetY = p.spriteH - p.hh;
-      const sx = p.x - spriteOffsetX - this.camera.x;
-      const sy = p.y - spriteOffsetY - this.camera.y;
-
-      if (cx >= sx && cx <= sx + p.spriteW && cy >= sy && cy <= sy + p.spriteH) {
-        window.open(`https://discord.com/users/${id}`, '_blank');
-        return;
-      }
-    }
-  }
-
-  updateRemotePlayer(id: string, username: string, channelId: string, avatarUrl: string) {
+  updateRemotePlayer(id: string, username: string, voiceChannelId: string, avatarUrl: string) {
     // Si ce joueur est NOUS, on ne crée pas de "clone" distant, c'est le Player local qui gère
     if (this.player.user && this.player.user.id === id) return;
 
@@ -1120,7 +1425,7 @@ export class OfficeGame {
     
     // Fallback: mapper les channels sur nos zones en dur si l'ID n'est pas clair
     // On va utiliser un petit trick: prendre le dernier chiffre de l'ID Discord
-    const index = parseInt(channelId.slice(-1) || '0', 10) % this.map.zones.length;
+    const index = parseInt(voiceChannelId?.slice(-1) || '0', 10) % this.map.zones.length;
     const targetZone = this.map.zones[index] || this.map.zones[0]; 
 
     // Point aléatoire dans la zone pour qu'ils ne se chevauchent pas trop
@@ -1148,6 +1453,43 @@ export class OfficeGame {
     const rp = this.remotePlayers.get(id);
     if (rp) {
       rp.spotify = spotify;
+    }
+  }
+
+  updateRemotePlayerGame(id: string, game: any | null) {
+    if (this.player.user && this.player.user.id === id) {
+      this.player.game = game;
+      return;
+    }
+    const rp = this.remotePlayers.get(id);
+    if (rp) {
+      rp.game = game;
+    }
+  }
+
+  updateRemotePlayerSkin(id: string, skin: any) {
+    if (this.player.user && this.player.user.id === id) {
+      this.player.skin = skin;
+      this.player.sprites = null; // Force regenerate
+      return;
+    }
+    const rp = this.remotePlayers.get(id);
+    if (rp) {
+      rp.skin = skin;
+      rp.sprites = null; // Force regenerate
+    }
+  }
+
+  updateRemotePlayerChat(id: string, content: string) {
+    if (this.player.user && this.player.user.id === id) {
+      this.player.chatMessage = content;
+      this.player.chatTimer = 5; // Bulle visible 5 secondes
+      return;
+    }
+    const rp = this.remotePlayers.get(id);
+    if (rp) {
+      rp.chatMessage = content;
+      rp.chatTimer = 5;
     }
   }
 
