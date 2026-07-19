@@ -839,11 +839,14 @@ class Player {
   skin: any = null;
   sprites: any = null;
   isDragged: boolean = false;
+  isDraggingPending: boolean = false;
   wasPointerActive: boolean = false;
   dragStartX: number = 0;
   dragStartY: number = 0;
   dragOffsetX: number = 0;
   dragOffsetY: number = 0;
+  dragPointerStartX: number = 0;
+  dragPointerStartY: number = 0;
 
   constructor(x: number, y: number, user: any, socket: any) {
     this.hw = 28; this.hh = 18;
@@ -896,14 +899,75 @@ class Player {
     return pts.some(([px, py]) => map.isSolid(px, py));
   }
 
-  update(dt: number, input: any, map: any, bus: any, camera: any) {
+  update(dt: number, input: any, map: any, bus: any, _camera: any) {
     let inputDx = 0, inputDy = 0;
     if (input.up) inputDy -= 1;
     if (input.down) inputDy += 1;
     if (input.left) inputDx -= 1;
     if (input.right) inputDx += 1;
 
-    // Le déplacement à la souris (drag) a été retiré.
+    const p = input.pointer;
+    if (p && p.active && _camera) {
+      const targetX = p.x + _camera.x;
+      const targetY = p.y + _camera.y;
+
+      if (!this.wasPointerActive) {
+        const cx = this.x + this.hw / 2;
+        const sy = this.y + this.hh;
+        // On utilise la même zone que pour le clic (qui englobe la tête)
+        if (targetX >= cx - 24 && targetX <= cx + 24 &&
+            targetY >= sy - 60 && targetY <= sy + 10) {
+          this.isDraggingPending = true;
+          this.dragStartX = this.x;
+          this.dragStartY = this.y;
+          this.dragPointerStartX = targetX;
+          this.dragPointerStartY = targetY;
+        }
+      }
+
+      if (this.isDraggingPending && !this.isDragged) {
+         if (Math.hypot(targetX - this.dragPointerStartX, targetY - this.dragPointerStartY) > 5) {
+             this.isDragged = true;
+             this.isDraggingPending = false;
+             this.dragOffsetX = this.x - targetX;
+             this.dragOffsetY = this.y - targetY;
+         }
+      }
+
+      if (this.isDragged) {
+        this.x = targetX + this.dragOffsetX;
+        this.y = targetY + this.dragOffsetY;
+        this.x = Math.max(0, Math.min(WORLD_W - this.hw, this.x));
+        this.y = Math.max(0, Math.min(WORLD_H - this.hh, this.y));
+        this.vx = 0;
+        this.vy = 0;
+        this.moving = false;
+        
+        const now = performance.now();
+        if (this.user && this.user.id !== 'spectator' && now - this.lastEmit > 50) {
+          this.socket?.emit('player_move_xy', {
+            userId: this.user.id, username: this.user.username, avatarUrl: this.user.avatarUrl, skin: this.skin,
+            x: this.x, y: this.y, dir: this.dir, frame: 0
+          });
+          this.lastEmit = now;
+        }
+      }
+    } else {
+      if (this.isDraggingPending) {
+         this.isDraggingPending = false;
+      }
+      if (this.isDragged) {
+        this.isDragged = false;
+        if (this._collides(map, this.x, this.y)) {
+          this.x = this.dragStartX;
+          this.y = this.dragStartY;
+        }
+        try { localStorage.setItem('discord_user_pos', JSON.stringify({ x: this.centerX, y: this.centerY })); } catch(e) {}
+        (window as any).lastDragEndTime = performance.now();
+      }
+    }
+    
+    if (p) this.wasPointerActive = p.active;
 
     if (inputDx !== 0 && inputDy !== 0) { 
       const length = Math.sqrt(inputDx * inputDx + inputDy * inputDy);
@@ -1000,7 +1064,9 @@ class Player {
     const img = frames[this.frame];
     
     let bounce = 0;
-    if (this.moving) {
+    if (this.isDragged) {
+      bounce = 12 + Math.sin(performance.now() / 100) * 3;
+    } else if (this.moving) {
       bounce = Math.abs(Math.sin(this.animTime * Math.PI * 4)) * 3;
     } else {
       bounce = Math.sin(performance.now() / 400) * 1.5;
@@ -1547,6 +1613,9 @@ export class OfficeGame {
     });
 
     this.canvas.addEventListener('click', (e) => {
+      if ((window as any).lastDragEndTime && performance.now() - (window as any).lastDragEndTime < 200) {
+        return; // Ignore ce clic, c'était la fin d'un glisser-déposer
+      }
       const rect = this.canvas.getBoundingClientRect();
       const scaleX = this.viewW / rect.width;
       const scaleY = this.viewH / rect.height;
@@ -1559,9 +1628,9 @@ export class OfficeGame {
       for (const p of allPlayers) {
         const cx = p.x + p.hw / 2;
         const sy = p.y + p.hh;
-        // Sprite visually is approx cx-8 to cx+8, and sy-18 to sy. Adding margin.
-        if (clickX >= cx - 12 && clickX <= cx + 12 &&
-            clickY >= sy - 30 && clickY <= sy + 4) {
+        // On augmente la zone vers le haut (pour couvrir la tête et le pseudo) et on l'élargit
+        if (clickX >= cx - 24 && clickX <= cx + 24 &&
+            clickY >= sy - 60 && clickY <= sy + 10) {
           const userId = p.user ? p.user.id : p.id;
           if (userId && userId !== 'spectator') {
             // Calculer les coordonnées sur l'écran
@@ -1703,7 +1772,9 @@ export class OfficeGame {
 
     this.player.update(dt, this.input, this.map, this.bus, this.camera);
     this.remotePlayers.forEach(rp => rp.update(dt));
-    this.camera.update(this.player.centerX, this.player.centerY, dt);
+    if (!this.player.isDragged) {
+      this.camera.update(this.player.centerX, this.player.centerY, dt);
+    }
     this._render(now / 1000);
     this.hud.drawMinimap(this.map, this.player);
 
