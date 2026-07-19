@@ -29,6 +29,14 @@ app.use(express.json());
 // Structure en mémoire pour MVP (simplifié)
 const activeUsers = new Map<string, any>();
 
+// Etat global pour le cinéma YouTube
+let youtubeState = {
+  videoId: null as string | null,
+  isPlaying: false,
+  playbackTime: 0,
+  lastUpdateTimestamp: Date.now()
+};
+
 // ==========================================
 // OAUTH DISCORD
 // ==========================================
@@ -151,7 +159,10 @@ io.on('connection', (socket) => {
   console.log('Nouveau client web connecté:', socket.id);
 
   // Envoi l'état initial
-  socket.emit('initial_state', { activeUsers: Array.from(activeUsers.values()) });
+  socket.emit('initial_state', { 
+    activeUsers: Array.from(activeUsers.values()),
+    youtubeState
+  });
 
   // Événement pour le mouvement continu 60fps (X,Y)
   socket.on('player_move_xy', (data) => {
@@ -173,6 +184,33 @@ io.on('connection', (socket) => {
     console.log(`Le Web a envoyé un message texte pour ${data.channelId}: ${data.content}`);
     // On relaie au bot pour exécution
     io.emit('DISCORD_SEND_WEBHOOK_MESSAGE', data);
+  });
+
+  // Gestion du Cinéma YouTube
+  socket.on('YOUTUBE_COMMAND', (data) => {
+    // data = { type: 'PLAY', videoId: '...' } ou { type: 'PAUSE', time: ... } etc.
+    if (data.type === 'PLAY') {
+      youtubeState = {
+        videoId: data.videoId,
+        isPlaying: true,
+        playbackTime: 0,
+        lastUpdateTimestamp: Date.now()
+      };
+    } else if (data.type === 'SYNC') {
+      youtubeState.isPlaying = data.isPlaying;
+      youtubeState.playbackTime = data.playbackTime;
+      youtubeState.lastUpdateTimestamp = Date.now();
+    } else if (data.type === 'STOP') {
+      youtubeState = {
+        videoId: null,
+        isPlaying: false,
+        playbackTime: 0,
+        lastUpdateTimestamp: Date.now()
+      };
+    }
+    
+    // On broadcast le nouvel état à tous les clients
+    io.emit('YOUTUBE_STATE', youtubeState);
   });
 
   // Mise à jour de la couleur/skin

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { OfficeGame } from '../game/OfficeWalkerEngine';
 import { io } from 'socket.io-client';
+import YouTube from 'react-youtube';
 import './OfficeWalker.css';
 
 export const MapComponent: React.FC = () => {
@@ -13,6 +14,13 @@ export const MapComponent: React.FC = () => {
   const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const [profilePos, setProfilePos] = useState<{x: number, y: number} | null>(null);
   const [trackingUserId, setTrackingUserId] = useState<string | null>(null);
+  
+  const [youtubeState, setYoutubeState] = useState<any>(null);
+  const [showYoutubePrompt, setShowYoutubePrompt] = useState(false);
+  const [youtubeUrlInput, setYoutubeUrlInput] = useState("");
+  const cinemaDivRef = useRef<HTMLDivElement>(null);
+  const ytPlayerRef = useRef<any>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<OfficeGame | null>(null);
   const socketRef = useRef<any>(null);
@@ -73,6 +81,7 @@ export const MapComponent: React.FC = () => {
     });
 
     socket.on('connect', () => {
+      console.log('Connecté au serveur web via Socket.IO');
       if (currentUser && currentUser.id !== 'spectator') {
         socket.emit('web_connect', {
           userId: currentUser.id,
@@ -91,6 +100,8 @@ export const MapComponent: React.FC = () => {
 
     socket.on('initial_state', (data: any) => {
       console.log('Connecté au backend !', data);
+      if (data && data.youtubeState) setYoutubeState(data.youtubeState);
+
       if (data && data.activeUsers) {
         data.activeUsers.forEach((u: any) => {
           gameRef.current?.updateRemotePlayer(u.userId, u.username, u.channelId || u.newChannelId || '0', u.avatarUrl, u.avatarDecorationUrl);
@@ -104,6 +115,18 @@ export const MapComponent: React.FC = () => {
             gameRef.current?.updateRemotePlayerSkin(u.userId, u.skin);
           }
         });
+      }
+    });
+
+    socket.on('YOUTUBE_STATE', (state: any) => {
+      setYoutubeState(state);
+      // Sync player time if needed
+      if (ytPlayerRef.current && state.isPlaying) {
+        const currentYtTime = ytPlayerRef.current.getCurrentTime() || 0;
+        const targetTime = state.playbackTime + (Date.now() - state.lastUpdateTimestamp) / 1000;
+        if (Math.abs(currentYtTime - targetTime) > 2) {
+          ytPlayerRef.current.seekTo(targetTime);
+        }
       }
     });
 
@@ -145,14 +168,53 @@ export const MapComponent: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!trackingUserId) return;
     let rafId: number;
     const updatePos = () => {
-      if (gameRef.current && trackingUserId) {
-        const coords = gameRef.current.getPlayerScreenCoords(trackingUserId);
-        if (coords) {
-          setProfilePos(coords);
+      try {
+        if (gameRef.current) {
+          // Tracker la position du profil Discord si ouvert
+          if (trackingUserId) {
+            const coords = gameRef.current.getPlayerScreenCoords(trackingUserId);
+            if (coords) {
+              setProfilePos(coords);
+            }
+          }
+          
+          // Tracker la position de l'écran de cinéma
+          const cinemaCoords = gameRef.current.getCinemaScreenCoords();
+          if (cinemaDivRef.current) {
+            if (cinemaCoords) {
+              const h = cinemaCoords.h - 16;
+              const w = Math.round(h * (16 / 9));
+              const offsetX = (cinemaCoords.w - w) / 2;
+
+              cinemaDivRef.current.style.display = 'block';
+              cinemaDivRef.current.style.transform = `translate(${cinemaCoords.x + offsetX}px, ${cinemaCoords.y + 8}px)`;
+              cinemaDivRef.current.style.width = `${w}px`;
+              cinemaDivRef.current.style.height = `${h}px`;
+            } else {
+              cinemaDivRef.current.style.display = 'none';
+            }
+          }
+
+          // Gérer le volume audio spatialisé
+          if (ytPlayerRef.current && gameRef.current.player) {
+            const px = gameRef.current.player.x;
+            const py = gameRef.current.player.y;
+            // Centre approximatif de l'écran dans le jeu (tile 47, 17)
+            const screenCenterX = 47 * 48;
+            const screenCenterY = 17 * 48;
+            const dist = Math.sqrt(Math.pow(px - screenCenterX, 2) + Math.pow(py - screenCenterY, 2));
+            
+            let volume = Math.max(0, 100 - (dist / 1500) * 100);
+            if (volume < 5) volume = 0;
+            if (typeof ytPlayerRef.current.setVolume === 'function') {
+              ytPlayerRef.current.setVolume(volume);
+            }
+          }
         }
+      } catch (err) {
+        console.error("Error in updatePos loop:", err);
       }
       rafId = requestAnimationFrame(updatePos);
     };
@@ -162,6 +224,11 @@ export const MapComponent: React.FC = () => {
 
   const handleSendMessage = () => {
     if (!chatMessage.trim() || !currentZone || !currentZone.textChannelId || !socketRef.current || !user) return;
+
+    const ytMatch = chatMessage.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+    if (ytMatch) {
+      socketRef.current.emit('YOUTUBE_COMMAND', { type: 'PLAY', videoId: ytMatch[1] });
+    }
 
     socketRef.current.emit('SEND_CHAT_MESSAGE', {
       userId: user.id,
@@ -321,10 +388,187 @@ export const MapComponent: React.FC = () => {
       )}
 
       <div id="gameWrap">
-        <div id="screen">
+        <div id="screen" style={{ position: 'relative' }}>
           <canvas ref={canvasRef} id="game"></canvas>
           <div id="fps">60 FPS</div>
+          
+          <div 
+            ref={cinemaDivRef}
+            style={{
+              position: 'absolute',
+              zIndex: 100,
+              left: 0,
+              top: 0,
+              display: 'none',
+              pointerEvents: 'auto',
+              overflow: 'hidden',
+              background: youtubeState?.videoId ? '#000' : 'transparent',
+              cursor: youtubeState?.videoId ? 'default' : 'pointer'
+            }}
+            onClick={() => {
+              if (!youtubeState?.videoId) {
+                setShowYoutubePrompt(true);
+              }
+            }}>
+              {youtubeState?.videoId && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm("⏹️ Voulez-vous arrêter la vidéo en cours ?")) {
+                      socketRef.current?.emit('YOUTUBE_COMMAND', { type: 'STOP' });
+                    }
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    zIndex: 200,
+                    background: 'rgba(255, 0, 0, 0.8)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}
+                  title="Arrêter le film"
+                >
+                  ✕
+                </button>
+              )}
+              {youtubeState?.videoId && (
+              <YouTube
+                videoId={youtubeState.videoId}
+                className="youtube-absolute-container"
+                opts={{
+                  width: '100%',
+                  height: '100%',
+                  playerVars: {
+                    autoplay: 1,
+                    controls: 0,
+                    disablekb: 1,
+                    fs: 0,
+                    modestbranding: 1
+                  }
+                }}
+                onReady={(e) => {
+                  ytPlayerRef.current = e.target;
+                  // Si l'état actuel est plus avancé que 0, on avance (pour ceux qui se connectent en cours de route)
+                  const targetTime = youtubeState.playbackTime + (Date.now() - youtubeState.lastUpdateTimestamp) / 1000;
+                  if (targetTime > 1) {
+                    e.target.seekTo(targetTime);
+                  }
+                }}
+                onStateChange={() => {
+                  // Optionnel : si on permet aux admins de faire pause, on émet un SYNC ici.
+                }}
+              />
+              )}
+            </div>
         </div>
+        {showYoutubePrompt && (
+          <div style={{
+            position: 'absolute',
+            bottom: '30px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(0, 0, 0, 0.85)',
+            padding: '15px 25px',
+            borderRadius: '12px',
+            display: 'flex',
+            gap: '15px',
+            alignItems: 'center',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+            zIndex: 1000,
+            border: '1px solid rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <span style={{ color: 'white', fontWeight: 'bold', fontSize: '16px' }}>Vidéos :</span>
+            <input 
+              type="text" 
+              placeholder="Collez le lien YouTube ici..."
+              value={youtubeUrlInput}
+              onChange={(e) => setYoutubeUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const ytMatch = youtubeUrlInput.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+                  if (ytMatch && socketRef.current) {
+                    socketRef.current.emit('YOUTUBE_COMMAND', { type: 'PLAY', videoId: ytMatch[1] });
+                    setShowYoutubePrompt(false);
+                    setYoutubeUrlInput("");
+                  } else {
+                    alert("Lien YouTube invalide !");
+                  }
+                } else if (e.key === 'Escape') {
+                  setShowYoutubePrompt(false);
+                  setYoutubeUrlInput("");
+                }
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                padding: '10px 15px',
+                borderRadius: '8px',
+                color: 'white',
+                width: '350px',
+                outline: 'none',
+                fontSize: '15px'
+              }}
+              autoFocus
+            />
+            <button 
+              onClick={() => {
+                const ytMatch = youtubeUrlInput.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+                if (ytMatch && socketRef.current) {
+                  socketRef.current.emit('YOUTUBE_COMMAND', { type: 'PLAY', videoId: ytMatch[1] });
+                  setShowYoutubePrompt(false);
+                  setYoutubeUrlInput("");
+                } else {
+                  alert("Lien YouTube invalide !");
+                }
+              }}
+              style={{
+                background: '#ff0000',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '15px',
+                transition: 'background 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = '#cc0000'}
+              onMouseOut={(e) => e.currentTarget.style.background = '#ff0000'}
+            >
+              Lecture
+            </button>
+            <button
+              onClick={() => {
+                setShowYoutubePrompt(false);
+                setYoutubeUrlInput("");
+              }}
+              style={{
+                background: 'transparent',
+                color: '#aaa',
+                border: 'none',
+                padding: '10px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: 'bold'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.color = 'white'}
+              onMouseOut={(e) => e.currentTarget.style.color = '#aaa'}
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

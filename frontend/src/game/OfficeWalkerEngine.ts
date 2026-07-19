@@ -9,7 +9,7 @@
 const ART      = 16;         
 const SCALE    = 3;          
 const TILE     = ART * SCALE; 
-const COLS = 40, ROWS = 24;
+const COLS = 55, ROWS = 24;
 const WORLD_W = COLS * TILE, WORLD_H = ROWS * TILE;
 
 /* ------------------------------ Utils ------------------------------------ */
@@ -124,6 +124,11 @@ class Assets {
       Px.rect(ctx, 4, 4, 1, 1, '#ff0055');
       Px.rect(ctx, 12, 12, 1, 1, '#00ffcc');
     });
+
+    this.floors.cinema = mk((ctx: any) => {
+      Px.rect(ctx, 0, 0, ART, ART, '#111111');
+      for (let y = 0; y < ART; y += 8) Px.rect(ctx, 0, y, ART, 1, '#1a1a1a');
+    });
   }
 
   _buildWall() {
@@ -137,7 +142,7 @@ class Assets {
   }
 
   _buildRug() {
-    const w = 6 * ART, h = 4 * ART;
+    const w = 7 * ART, h = 4 * ART;
     const { c, ctx } = Px.canvas(w, h);
     Px.rect(ctx, 0, 0, w, h, '#7a2020');
     Px.rect(ctx, 4, 4, w - 8, h - 8, '#8f2b2b');
@@ -247,6 +252,41 @@ class Assets {
       Px.circle(ctx, w*0.5, h*0.3, 7, '#2f6636');
       Px.circle(ctx, w*0.3, h*0.4, 5, '#3b7d43');
       Px.circle(ctx, w*0.7, h*0.35, 6, '#234f29');
+    });
+
+    add('cinemascreen9x5', 9, 5, (ctx: any, w: number, h: number) => {
+      // Grand écran noir
+      Px.rect(ctx, 2, 2, w - 4, h - 4, '#0a0a0a');
+      // Bordure argentée/métallique
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(3, 3, w - 6, h - 6);
+      
+      // Logo YouTube central
+      const logoW = 60;
+      const logoH = 40;
+      const logoX = w/2 - logoW/2;
+      const logoY = h/2 - logoH/2;
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(logoX, logoY, logoW, logoH, 10);
+      } else {
+        ctx.rect(logoX, logoY, logoW, logoH);
+      }
+      ctx.fill();
+
+      // Triangle blanc
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(logoX + 22, logoY + 10);
+      ctx.lineTo(logoX + 42, logoY + 20);
+      ctx.lineTo(logoX + 22, logoY + 30);
+      ctx.closePath();
+      ctx.fill();
+
+      // Stand de l'écran en bas
+      Px.rect(ctx, w/2 - 20, h - 4, 40, 4, '#1a1a1a');
     });
 
     add('futon1x2', 1, 2, (ctx: any, w: number, h: number) => {
@@ -477,6 +517,7 @@ class InputManager {
   keys: any = {};
   keydown: any;
   keyup: any;
+  pointer: { x: number, y: number, active: boolean } = { x: 0, y: 0, active: false };
 
   constructor() {
     this.keydown = (e: KeyboardEvent) => {
@@ -488,6 +529,40 @@ class InputManager {
     this.keyup = (e: KeyboardEvent) => { this.keys[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', this.keydown);
     window.addEventListener('keyup', this.keyup);
+
+    const setPointer = (e: any) => {
+      let clientX, clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      const rect = e.target.getBoundingClientRect();
+      const scaleX = e.target.width / (window.devicePixelRatio || 1) / rect.width;
+      const scaleY = e.target.height / (window.devicePixelRatio || 1) / rect.height;
+      this.pointer.x = (clientX - rect.left) * scaleX;
+      this.pointer.y = (clientY - rect.top) * scaleY;
+      this.pointer.active = true;
+    };
+
+    window.addEventListener('mousedown', (e) => { 
+      if ((e.target as HTMLElement).tagName === 'CANVAS') setPointer(e); 
+    });
+    window.addEventListener('mousemove', (e) => { 
+      if (e.buttons > 0 && (e.target as HTMLElement).tagName === 'CANVAS') setPointer(e); 
+      else this.pointer.active = false; 
+    });
+    window.addEventListener('mouseup', () => { this.pointer.active = false; });
+    
+    window.addEventListener('touchstart', (e) => { 
+      if ((e.target as HTMLElement).tagName === 'CANVAS') setPointer(e); 
+    }, { passive: false });
+    window.addEventListener('touchmove', (e) => { 
+      if ((e.target as HTMLElement).tagName === 'CANVAS') setPointer(e); 
+    }, { passive: false });
+    window.addEventListener('touchend', () => { this.pointer.active = false; });
   }
 
   destroy() {
@@ -520,6 +595,7 @@ class WorldMap {
       { name: 'Voyage (Japon)',    floorKey: 'japan',      icon: '🌸', voiceChannelId: 'salon_id_japon', textChannelId: null, x1: 1,  y1: 16, x2: 13, y2: 23, accent: '240,150,160' },
       { name: 'Bureau du Manager', floorKey: 'manager',    icon: '👔', voiceChannelId: 'salon_id_manager', textChannelId: null, x1: 14, y1: 16, x2: 26, y2: 23, accent: '127,217,160' },
       { name: 'Salle Gaming',      floorKey: 'gaming',     icon: '🎮', voiceChannelId: 'salon_id_serveurs', textChannelId: null, x1: 27, y1: 16, x2: 39, y2: 23, accent: '180,50,250' },
+      { name: 'Salle Cinéma',      floorKey: 'cinema',     icon: '🍿', voiceChannelId: 'salon_id_cinema', textChannelId: null, x1: 40, y1: 1, x2: 53, y2: 23, accent: '255,50,50' },
     ];
     this._generateLayout();
   }
@@ -529,7 +605,7 @@ class WorldMap {
     for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) this.grid[r][c] = 2;
   }
   _hWall(row: number, doorCenters: number[]) {
-    for (let c = 1; c < COLS - 1; c++) this._setWall(row, c);
+    for (let c = 1; c <= 39; c++) this._setWall(row, c);
     doorCenters.forEach(cc => { this.grid[row][cc - 1] = 0; this.grid[row][cc] = 0; });
   }
   _vWallSeg(col: number, rStart: number, rEnd: number, gapStart: number, gapEnd: number) {
@@ -550,6 +626,7 @@ class WorldMap {
     this._vWallSeg(26, 1, 9, 4, 5);
     this._vWallSeg(13, 16, 22, 18, 19);
     this._vWallSeg(26, 16, 22, 18, 19);
+    this._vWallSeg(39, 1, 22, 11, 15);
 
     // Nouvelle salle de gauche : Open Space
     this._addFurniture('whiteboard3x1', 1, 5, 1, 7);
@@ -571,13 +648,23 @@ class WorldMap {
     this._addFurniture('chair1x1', 8, 16, 8, 16);
     this._addFurniture('chair1x1', 8, 23, 8, 23);
     this._addFurniture('chair1x1', 8, 24, 8, 24);
-    this._addFurniture('rack1x5', 2, 38, 6, 38); // Déplacé sur le mur de DROITE pour libérer la porte à gauche
-    this._addFurniture('piano3x1', 2, 29, 2, 31); // Piano décalé le long du mur du haut
-    this._addFurniture('drumkit2x2', 2, 36, 3, 37); // Batterie bien calée dans le coin haut droit
-    this._addFurniture('speaker1x1', 6, 30, 6, 30); // Enceinte gauche
-    this._addFurniture('mixingdesk3x2', 6, 31, 7, 33); // Table de mixage parfaitement centrée sur le tapis
-    this._addFurniture('speaker1x1', 6, 34, 6, 34); // Enceinte droite
-    this._addFurniture('plant1x1', 8, 36, 8, 36); // Petite plante dans le coin bas droit
+    // Studio de Musique (Plus pro et épuré, sans bloc serveur)
+    this._addFurniture('piano3x1', 2, 28, 2, 30); // Piano décalé à gauche
+    this._addFurniture('tv2x1', 2, 32, 2, 33); // Écran mural / monitoring
+    this._addFurniture('drumkit2x2', 2, 35, 3, 36); // Batterie à la place de la plante
+    
+    // Scène DJ & Son massive
+    this._addFurniture('speaker1x1', 5, 31, 5, 31); // Double enceinte gauche
+    this._addFurniture('speaker1x1', 6, 31, 6, 31); 
+    this._addFurniture('mixingdesk3x2', 6, 32, 7, 34); // Table de mixage centrée
+    this._addFurniture('speaker1x1', 5, 35, 5, 35); // Double enceinte droite
+    this._addFurniture('speaker1x1', 6, 35, 6, 35); 
+    
+    // Espace écoute / détente
+    this._addFurniture('plant1x1', 8, 28, 8, 28);
+    this._addFurniture('couch2x1', 9, 29, 9, 30);
+    this._addFurniture('couch2x1', 9, 35, 9, 36);
+    this._addFurniture('watercooler1x1', 8, 38, 8, 38);
     this._addFurniture('shoji4x1', 16, 2, 16, 5);
     this._addFurniture('shoji4x1', 16, 8, 16, 11);
     this._addFurniture('bonsai1x1', 16, 1, 16, 1);
@@ -610,6 +697,38 @@ class WorldMap {
     this._addFurniture('gamingdesk2x2', 20, 30, 21, 31);
     this._addFurniture('gamingdesk2x2', 20, 34, 21, 35);
     this._addFurniture('watercooler1x1', 22, 38, 22, 38);
+    
+    // Salle Cinéma (Prend toute la hauteur à droite)
+    // Grand écran au mur du haut (Ratio 16:9 = 9 tiles de large, 5 tiles de haut)
+    this._addFurniture('cinemascreen9x5', 3, 42, 7, 50);
+    // Rangées de sièges resserrées vers l'écran
+    this._addFurniture('couch2x1', 9, 43, 9, 44);
+    this._addFurniture('couch2x1', 9, 46, 9, 47);
+    this._addFurniture('couch2x1', 9, 49, 9, 50);
+
+    this._addFurniture('couch2x1', 13, 43, 13, 44);
+    this._addFurniture('couch2x1', 13, 46, 13, 47);
+    this._addFurniture('couch2x1', 13, 49, 13, 50);
+    
+    this._addFurniture('couch2x1', 17, 43, 17, 44);
+    this._addFurniture('couch2x1', 17, 46, 17, 47);
+    this._addFurniture('couch2x1', 17, 49, 17, 50);
+    
+    this._addFurniture('couch2x1', 21, 43, 21, 44);
+    this._addFurniture('couch2x1', 21, 46, 21, 47);
+    this._addFurniture('couch2x1', 21, 49, 21, 50);
+    
+    // Décorations à l'arrière et sur les côtés
+    this._addFurniture('plant1x1', 1, 41, 1, 41);
+    this._addFurniture('plant1x1', 1, 52, 1, 52);
+    
+    // Décoration au fond de la salle (y = 20 à 22)
+    // Alignement des passages avec les sièges (passages aux colonnes 45 et 48)
+    this._addFurniture('arcade2x1', 20, 43, 20, 44);
+    this._addFurniture('watercooler1x1', 20, 49, 20, 49);
+    this._addFurniture('bonsai1x1', 20, 50, 20, 50);
+    this._addFurniture('plant1x1', 22, 41, 22, 41);
+    this._addFurniture('plant1x1', 22, 52, 22, 52);
   }
 
   isSolid(px: number, py: number) {
@@ -719,13 +838,19 @@ class Player {
   chatTimer: number = 0;
   skin: any = null;
   sprites: any = null;
+  isDragged: boolean = false;
+  wasPointerActive: boolean = false;
+  dragStartX: number = 0;
+  dragStartY: number = 0;
+  dragOffsetX: number = 0;
+  dragOffsetY: number = 0;
 
   constructor(x: number, y: number, user: any, socket: any) {
     this.hw = 28; this.hh = 18;
     this.x = x; this.y = y; 
     this.vx = 0; this.vy = 0;
     this.spriteW = 16 * SCALE; this.spriteH = 24 * SCALE;
-    this.speed = 190;
+    this.speed = 280;
     this.dir = 'down';
     this.moving = false;
     this.animTime = 0;
@@ -771,16 +896,72 @@ class Player {
     return pts.some(([px, py]) => map.isSolid(px, py));
   }
 
-  update(dt: number, input: any, map: any, bus: any) {
+  update(dt: number, input: any, map: any, bus: any, camera: any) {
     let inputDx = 0, inputDy = 0;
     if (input.up) inputDy -= 1;
     if (input.down) inputDy += 1;
     if (input.left) inputDx -= 1;
     if (input.right) inputDx += 1;
 
-    if (inputDx !== 0 && inputDy !== 0) { inputDx *= 0.7071; inputDy *= 0.7071; }
+    const p = input.pointer;
+    if (p && p.active && camera) {
+      const targetX = p.x + camera.x;
+      const targetY = p.y + camera.y;
 
-    const accel = 1500;
+      if (!this.wasPointerActive) {
+        const distToCenter = Math.hypot(targetX - this.centerX, targetY - this.centerY);
+        if (distToCenter < 40) {
+          this.isDragged = true;
+          this.dragStartX = this.x;
+          this.dragStartY = this.y;
+          this.dragOffsetX = this.x - targetX;
+          this.dragOffsetY = this.y - targetY;
+        } else {
+          this.isDragged = false;
+        }
+      }
+
+      if (this.isDragged) {
+        this.x = targetX + this.dragOffsetX;
+        this.y = targetY + this.dragOffsetY;
+        this.x = Math.max(0, Math.min(WORLD_W - this.hw, this.x));
+        this.y = Math.max(0, Math.min(WORLD_H - this.hh, this.y));
+        this.vx = 0;
+        this.vy = 0;
+        this.moving = false;
+        
+        // Emit movement immediately while dragging for smoothness
+        const now = performance.now();
+        if (this.user && this.user.id !== 'spectator' && now - this.lastEmit > 50) {
+          this.socket?.emit('player_move_xy', {
+            userId: this.user.id, username: this.user.username, avatarUrl: this.user.avatarUrl, skin: this.skin,
+            x: this.x, y: this.y, dir: this.dir, frame: 0
+          });
+          this.lastEmit = now;
+        }
+      }
+    } else {
+      if (this.isDragged) {
+        this.isDragged = false;
+        // Snap out of furniture if dropped inside
+        if (this._collides(map, this.x, this.y)) {
+          this.x = this.dragStartX;
+          this.y = this.dragStartY;
+        }
+        // Save pos when dropped
+        try { localStorage.setItem('discord_user_pos', JSON.stringify({ x: this.centerX, y: this.centerY })); } catch(e) {}
+      }
+    }
+    
+    if (p) this.wasPointerActive = p.active;
+
+    if (inputDx !== 0 && inputDy !== 0) { 
+      const length = Math.sqrt(inputDx * inputDx + inputDy * inputDy);
+      inputDx /= length; 
+      inputDy /= length; 
+    }
+
+    const accel = 3500;
     const friction = 10;
     
     this.vx += inputDx * accel * dt;
@@ -869,7 +1050,9 @@ class Player {
     const img = frames[this.frame];
     
     let bounce = 0;
-    if (this.moving) {
+    if (this.isDragged) {
+      bounce = 12 + Math.sin(performance.now() / 100) * 3;
+    } else if (this.moving) {
       bounce = Math.abs(Math.sin(this.animTime * Math.PI * 4)) * 3;
     } else {
       bounce = Math.sin(performance.now() / 400) * 1.5;
@@ -884,7 +1067,7 @@ class Player {
     ctx.globalAlpha = 0.32;
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    const shadowScale = 1 - (Math.max(0, bounce) / 10);
+    const shadowScale = Math.max(0, 1 - (Math.max(0, bounce) / 10));
     ctx.ellipse(this.x + this.hw / 2 - cam.x, this.y + this.hh - cam.y, (this.hw / 1.7) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
@@ -1570,9 +1753,11 @@ export class OfficeGame {
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
-    this.player.update(dt, this.input, this.map, this.bus);
+    this.player.update(dt, this.input, this.map, this.bus, this.camera);
     this.remotePlayers.forEach(rp => rp.update(dt));
-    this.camera.update(this.player.centerX, this.player.centerY, dt);
+    if (!this.player.isDragged) {
+      this.camera.update(this.player.centerX, this.player.centerY, dt);
+    }
     this._render(now / 1000);
     this.hud.drawMinimap(this.map, this.player);
 
@@ -1659,5 +1844,36 @@ export class OfficeGame {
     const screenY = (sy - this.camera.y) * scaleY + rect.top;
 
     return { x: screenX, y: screenY };
+  }
+
+  getCinemaScreenCoords(): { x: number, y: number, w: number, h: number } | null {
+    // La télé est placée à c1=42, r1=1. Elle fait 9 tiles de large (w=9) et 5 tiles de haut (h=5).
+    // Les dimensions d'une tile sont définies par TILE = ART * SCALE = 16 * 3 = 48.
+    const screenTileX = 42;
+    const screenTileY = 3;
+    const screenTileW = 9;
+    const screenTileH = 5;
+
+    const gameX = screenTileX * TILE;
+    const gameY = screenTileY * TILE;
+    const gameW = screenTileW * TILE;
+    const gameH = screenTileH * TILE;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = rect.width / this.viewW;
+    const scaleY = rect.height / this.viewH;
+
+    // Si le bord droit de l'écran est avant le bord gauche de la caméra, ou l'inverse, il est hors champ
+    if (gameX + gameW < this.camera.x || gameX > this.camera.x + this.viewW ||
+        gameY + gameH < this.camera.y || gameY > this.camera.y + this.viewH) {
+      return null;
+    }
+
+    const screenX = (gameX - this.camera.x) * scaleX + rect.left;
+    const screenY = (gameY - this.camera.y) * scaleY + rect.top;
+    const screenW = gameW * scaleX;
+    const screenH = gameH * scaleY;
+
+    return { x: screenX, y: screenY, w: screenW, h: screenH };
   }
 }
