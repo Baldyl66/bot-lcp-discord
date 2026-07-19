@@ -903,57 +903,7 @@ class Player {
     if (input.left) inputDx -= 1;
     if (input.right) inputDx += 1;
 
-    const p = input.pointer;
-    if (p && p.active && camera) {
-      const targetX = p.x + camera.x;
-      const targetY = p.y + camera.y;
-
-      if (!this.wasPointerActive) {
-        const distToCenter = Math.hypot(targetX - this.centerX, targetY - this.centerY);
-        if (distToCenter < 40) {
-          this.isDragged = true;
-          this.dragStartX = this.x;
-          this.dragStartY = this.y;
-          this.dragOffsetX = this.x - targetX;
-          this.dragOffsetY = this.y - targetY;
-        } else {
-          this.isDragged = false;
-        }
-      }
-
-      if (this.isDragged) {
-        this.x = targetX + this.dragOffsetX;
-        this.y = targetY + this.dragOffsetY;
-        this.x = Math.max(0, Math.min(WORLD_W - this.hw, this.x));
-        this.y = Math.max(0, Math.min(WORLD_H - this.hh, this.y));
-        this.vx = 0;
-        this.vy = 0;
-        this.moving = false;
-        
-        // Emit movement immediately while dragging for smoothness
-        const now = performance.now();
-        if (this.user && this.user.id !== 'spectator' && now - this.lastEmit > 50) {
-          this.socket?.emit('player_move_xy', {
-            userId: this.user.id, username: this.user.username, avatarUrl: this.user.avatarUrl, skin: this.skin,
-            x: this.x, y: this.y, dir: this.dir, frame: 0
-          });
-          this.lastEmit = now;
-        }
-      }
-    } else {
-      if (this.isDragged) {
-        this.isDragged = false;
-        // Snap out of furniture if dropped inside
-        if (this._collides(map, this.x, this.y)) {
-          this.x = this.dragStartX;
-          this.y = this.dragStartY;
-        }
-        // Save pos when dropped
-        try { localStorage.setItem('discord_user_pos', JSON.stringify({ x: this.centerX, y: this.centerY })); } catch(e) {}
-      }
-    }
-    
-    if (p) this.wasPointerActive = p.active;
+    // Le déplacement à la souris (drag) a été retiré.
 
     if (inputDx !== 0 && inputDy !== 0) { 
       const length = Math.sqrt(inputDx * inputDx + inputDy * inputDy);
@@ -1050,9 +1000,7 @@ class Player {
     const img = frames[this.frame];
     
     let bounce = 0;
-    if (this.isDragged) {
-      bounce = 12 + Math.sin(performance.now() / 100) * 3;
-    } else if (this.moving) {
+    if (this.moving) {
       bounce = Math.abs(Math.sin(this.animTime * Math.PI * 4)) * 3;
     } else {
       bounce = Math.sin(performance.now() / 400) * 1.5;
@@ -1755,9 +1703,7 @@ export class OfficeGame {
 
     this.player.update(dt, this.input, this.map, this.bus, this.camera);
     this.remotePlayers.forEach(rp => rp.update(dt));
-    if (!this.player.isDragged) {
-      this.camera.update(this.player.centerX, this.player.centerY, dt);
-    }
+    this.camera.update(this.player.centerX, this.player.centerY, dt);
     this._render(now / 1000);
     this.hud.drawMinimap(this.map, this.player);
 
