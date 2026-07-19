@@ -16,6 +16,7 @@ export const MapComponent: React.FC = () => {
   const [trackingUserId, setTrackingUserId] = useState<string | null>(null);
   
   const [youtubeState, setYoutubeState] = useState<any>(null);
+  const youtubeStateRef = useRef<any>(null);
   const [showYoutubePrompt, setShowYoutubePrompt] = useState(false);
   const [youtubeUrlInput, setYoutubeUrlInput] = useState("");
   const cinemaDivRef = useRef<HTMLDivElement>(null);
@@ -119,13 +120,18 @@ export const MapComponent: React.FC = () => {
     });
 
     socket.on('YOUTUBE_STATE', (state: any) => {
+      youtubeStateRef.current = state;
       setYoutubeState(state);
-      // Sync player time if needed
-      if (ytPlayerRef.current && state.isPlaying) {
-        const currentYtTime = ytPlayerRef.current.getCurrentTime() || 0;
-        const targetTime = state.playbackTime + (Date.now() - state.lastUpdateTimestamp) / 1000;
-        if (Math.abs(currentYtTime - targetTime) > 2) {
-          ytPlayerRef.current.seekTo(targetTime);
+      if (ytPlayerRef.current) {
+        if (state.isPlaying) {
+          ytPlayerRef.current.playVideo();
+          const currentYtTime = ytPlayerRef.current.getCurrentTime() || 0;
+          const targetTime = state.playbackTime + (Date.now() - state.lastUpdateTimestamp) / 1000;
+          if (Math.abs(currentYtTime - targetTime) > 2) {
+            ytPlayerRef.current.seekTo(targetTime);
+          }
+        } else if (state.videoId) {
+          ytPlayerRef.current.pauseVideo();
         }
       }
     });
@@ -450,8 +456,8 @@ export const MapComponent: React.FC = () => {
                   height: '100%',
                   playerVars: {
                     autoplay: 1,
-                    controls: 0,
-                    disablekb: 1,
+                    controls: 1,
+                    disablekb: 0,
                     fs: 0,
                     modestbranding: 1
                   }
@@ -463,9 +469,25 @@ export const MapComponent: React.FC = () => {
                   if (targetTime > 1) {
                     e.target.seekTo(targetTime);
                   }
+                  if (!youtubeState.isPlaying) {
+                    e.target.pauseVideo();
+                  }
                 }}
-                onStateChange={() => {
-                  // Optionnel : si on permet aux admins de faire pause, on émet un SYNC ici.
+                onStateChange={(e) => {
+                  // e.data === 1 (Lecture), e.data === 2 (Pause)
+                  if (e.data === 1 || e.data === 2) {
+                    const isPlaying = e.data === 1;
+                    const expectedState = youtubeStateRef.current;
+                    // Éviter la boucle d'écho : on n'émet que si notre action contredit l'état serveur connu
+                    if (expectedState && expectedState.isPlaying !== isPlaying) {
+                      socketRef.current?.emit('YOUTUBE_COMMAND', {
+                        type: 'SYNC',
+                        isPlaying,
+                        playbackTime: e.target.getCurrentTime()
+                      });
+                      youtubeStateRef.current = { ...expectedState, isPlaying };
+                    }
+                  }
                 }}
               />
               )}
