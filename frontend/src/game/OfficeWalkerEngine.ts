@@ -712,7 +712,7 @@ class WorldMap {
           c2 = f.c1 + 7;
           f.r2 = f.r1 + 2;
         }
-          this._addFurniture(type, f.r1, f.c1, f.r2, c2, f.dir);
+            this._addFurniture(type, f.r1, f.c1, f.r2, c2, f.dir, f.id);
         });
   }
 
@@ -734,9 +734,9 @@ class WorldMap {
     for (let r = rStart; r <= rEnd; r++) { if (r >= gapStart && r <= gapEnd) continue; this._setWall(r, col); }
   }
 
-  _addFurniture(type: string, r1: number, c1: number, r2: number, c2: number, dir?: number) {
+  _addFurniture(type: string, r1: number, c1: number, r2: number, c2: number, dir?: number, id?: string) {
     this._setSolid(r1, c1, r2, c2);
-    this.furniture.push({ id: Math.random().toString(36).substring(2, 9), type, r1, c1, r2, c2, dir });
+    this.furniture.push({ id: id || Math.random().toString(36).substring(2, 9), type, r1, c1, r2, c2, dir });
   }
 
   _buildWalls() {
