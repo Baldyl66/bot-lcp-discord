@@ -1,2 +1,4 @@
 node_modules
-.envstreaks.json
+.env
+backend/.env
+streaks.json
