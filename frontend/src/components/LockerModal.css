@@ -1,0 +1,167 @@
+.locker-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.locker-modal-container {
+  background: linear-gradient(145deg, #1e2029 0%, #15161c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  width: 800px;
+  max-width: 90vw;
+  height: 500px;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.locker-left-panel {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, rgba(58, 160, 255, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  position: relative;
+}
+
+.locker-canvas {
+  width: 256px;
+  height: 384px;
+  filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+}
+
+.locker-right-panel {
+  width: 320px;
+  background: rgba(0, 0, 0, 0.2);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+.locker-title {
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0 0 30px 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: -webkit-linear-gradient(#fff, #aaa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.locker-option {
+  margin-bottom: 20px;
+}
+
+.locker-option label {
+  display: block;
+  color: #a0a5b5;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.locker-select {
+  width: 100%;
+  background: #252836;
+  border: 1px solid #3a3d4a;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.locker-select:hover, .locker-select:focus {
+  border-color: #5b6285;
+}
+
+.locker-color-picker {
+  display: flex;
+  align-items: center;
+  background: #252836;
+  border: 1px solid #3a3d4a;
+  border-radius: 8px;
+  padding: 5px;
+}
+
+.locker-color-picker input[type="color"] {
+  -webkit-appearance: none;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+}
+
+.locker-color-picker input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.locker-color-picker input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+}
+
+.locker-color-hex {
+  color: #fff;
+  font-family: monospace;
+  margin-left: 10px;
+  font-size: 14px;
+}
+
+.locker-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.locker-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.locker-btn-save {
+  background: #3ba55c;
+  color: white;
+}
+.locker-btn-save:hover {
+  background: #2d8146;
+  box-shadow: 0 0 15px rgba(59, 165, 92, 0.4);
+}
+
+.locker-btn-cancel {
+  background: transparent;
+  color: #a0a5b5;
+  border: 1px solid #3a3d4a;
+}
+.locker-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}

@@ -476,8 +476,10 @@ class Assets {
     });
   }
 
-  generatePlayerSprites(skinOptions?: { shirt: string, pants: string }) {
-    const SKIN = '#e0a878', HAIR = '#3a2a1e';
+  generatePlayerSprites(skinOptions?: { shirt: string, pants: string, hair?: string, gender?: string }) {
+    const SKIN = '#e0a878';
+    const HAIR = skinOptions?.hair || '#3a2a1e';
+    const GENDER = skinOptions?.gender || 'male';
     const SHIRT = skinOptions?.shirt || '#3aa0ff';
     const PANTS = skinOptions?.pants || '#25324a';
     
@@ -505,10 +507,19 @@ class Assets {
         if (dir === 'up') {
           Px.rect(ctx, 4, 2, 8, 5, HAIR);
           Px.rect(ctx, 5, 1, 6, 1, HAIR); // Round top
+          if (GENDER === 'female') {
+            Px.rect(ctx, 3, 5, 2, 6, HAIR);
+            Px.rect(ctx, 11, 5, 2, 6, HAIR);
+            Px.rect(ctx, 4, 7, 8, 4, HAIR); // Long hair back
+          }
         } else { 
           Px.rect(ctx, 4, 1, 8, 4, HAIR); 
           Px.rect(ctx, 3, 3, 1, 2, HAIR); // Sideburns
           Px.rect(ctx, 12, 3, 1, 2, HAIR); 
+          if (GENDER === 'female') {
+            Px.rect(ctx, 2, 5, 2, 6, HAIR);
+            Px.rect(ctx, 12, 5, 2, 6, HAIR);
+          }
           // Eyes
           Px.rect(ctx, 5, 6, 2, 1, '#1c1c1c'); 
           Px.rect(ctx, 9, 6, 2, 1, '#1c1c1c'); 
@@ -537,10 +548,16 @@ class Assets {
            Px.rect(ctx, 5, 2, 8, 4, HAIR); // Top
            Px.rect(ctx, 9, 4, 4, 5, HAIR); // Back (right side)
            Px.rect(ctx, 6, 1, 6, 2, HAIR); // Top round
+           if (GENDER === 'female') {
+             Px.rect(ctx, 9, 9, 4, 4, HAIR); // Long hair back
+           }
         } else {
            Px.rect(ctx, 3, 2, 8, 4, HAIR); // Top
            Px.rect(ctx, 3, 4, 4, 5, HAIR); // Back (left side)
            Px.rect(ctx, 4, 1, 6, 2, HAIR); // Top round
+           if (GENDER === 'female') {
+             Px.rect(ctx, 3, 9, 4, 4, HAIR); // Long hair back
+           }
         }
         
         Px.rect(ctx, dir === 'left' ? 4 : 9, 3, 3, 2, 'rgba(255,255,255,0.15)'); // Highlight head
@@ -2518,4 +2535,22 @@ export class OfficeGame {
 
     return { x: screenX, y: screenY, w: screenW, h: screenH };
   }
+}
+
+export function renderSkinPreview(canvas: HTMLCanvasElement, skin: any) {
+  const assets = new Assets();
+  const sprites = assets.generatePlayerSprites(skin);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const img = sprites['down'][0];
+  if (!img) return;
+  
+  ctx.imageSmoothingEnabled = false;
+  const scale = canvas.height / img.height;
+  const scaledWidth = img.width * scale;
+  const offsetX = (canvas.width - scaledWidth) / 2;
+  
+  ctx.drawImage(img, offsetX, 0, scaledWidth, canvas.height);
 }

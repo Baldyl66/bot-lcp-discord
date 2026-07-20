@@ -6,6 +6,7 @@ import './OfficeWalker.css';
 import { WhiteboardModal } from './WhiteboardModal';
 import { ImageBoardModal } from './ImageBoardModal';
 import { CheatPanel } from './CheatPanel';
+import { LockerModal } from './LockerModal';
 
 export const MapComponent: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -13,7 +14,7 @@ export const MapComponent: React.FC = () => {
   const [chatMessage, setChatMessage] = useState("");
   const [showVestiaire, setShowVestiaire] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [skin, setSkin] = useState<{ shirt: string, pants: string }>({ shirt: '#3aa0ff', pants: '#25324a' });
+  const [skin, setSkin] = useState<{ shirt: string, pants: string, hair: string, gender: string }>({ shirt: '#3aa0ff', pants: '#25324a', hair: '#3a2a1e', gender: 'male' });
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState<boolean>(false);
   const [profilePos, setProfilePos] = useState<{ x: number, y: number } | null>(null);
@@ -629,28 +630,18 @@ export const MapComponent: React.FC = () => {
       )}
 
       {showVestiaire && (
-        <div style={{ position: 'absolute', top: '60px', left: '10px', zIndex: 100, background: 'rgba(30,30,30,0.95)', padding: '15px', borderRadius: '8px', color: 'white', width: '200px' }}>
-          <h3 style={{ marginTop: 0, fontSize: '14px', marginBottom: '15px' }}>Personnaliser l'Avatar</h3>
-          <div style={{ marginBottom: '10px' }}>
-            <label style={{ fontSize: '12px', display: 'block', marginBottom: '5px' }}>Couleur T-Shirt</label>
-            <input type="color" value={skin.shirt} onChange={(e) => setSkin({ ...skin, shirt: e.target.value })} style={{ width: '100%' }} />
-          </div>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ fontSize: '12px', display: 'block', marginBottom: '5px' }}>Couleur Pantalon</label>
-            <input type="color" value={skin.pants} onChange={(e) => setSkin({ ...skin, pants: e.target.value })} style={{ width: '100%' }} />
-          </div>
-          <button
-            onClick={() => {
-              if (!user) return;
-              localStorage.setItem(`skin_${user.id}`, JSON.stringify(skin));
-              if (gameRef.current) gameRef.current.updateRemotePlayerSkin(user.id, skin);
-              if (socketRef.current) socketRef.current.emit('UPDATE_SKIN', skin);
-              setShowVestiaire(false);
-            }}
-            style={{ background: '#3ba55c', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', width: '100%' }}>
-            Sauvegarder
-          </button>
-        </div>
+        <LockerModal 
+          skin={skin} 
+          setSkin={setSkin} 
+          onSave={() => {
+            if (!user) return;
+            localStorage.setItem(`skin_${user.id}`, JSON.stringify(skin));
+            if (gameRef.current) gameRef.current.updateRemotePlayerSkin(user.id, skin);
+            if (socketRef.current) socketRef.current.emit('UPDATE_SKIN', skin);
+            setShowVestiaire(false);
+          }}
+          onClose={() => setShowVestiaire(false)}
+        />
       )}
 
       {currentZone && currentZone.textChannelId && user && user.id !== 'spectator' && (
