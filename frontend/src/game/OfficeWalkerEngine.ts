@@ -2227,7 +2227,7 @@ export class OfficeGame {
       const whiteboardClicked = this.map.furniture.find((f: any) =>
         f.type.startsWith('whiteboard') && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
       );
-      if (whiteboardClicked) {
+      if (whiteboardClicked && !this.isBuildMode) {
         this.bus.emit('whiteboard_clicked');
         return;
       }
@@ -2235,7 +2235,7 @@ export class OfficeGame {
       const imageboardClicked = this.map.furniture.find((f: any) =>
         f.type.startsWith('imageboard') && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
       );
-      if (imageboardClicked) {
+      if (imageboardClicked && !this.isBuildMode) {
         this.bus.emit('imageboard_clicked', imageboardClicked.id);
         return;
       }

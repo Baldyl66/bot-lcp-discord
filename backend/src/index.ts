@@ -40,7 +40,24 @@ let youtubeState = {
 
 // Etat du tableau blanc et tableaux d'images
 let whiteboardLines: any[] = [];
+const IMAGEBOARDS_FILE = path.join(__dirname, '../../imageboards.json');
 let imageBoards: Record<string, string> = {};
+
+try {
+  if (fs.existsSync(IMAGEBOARDS_FILE)) {
+    imageBoards = JSON.parse(fs.readFileSync(IMAGEBOARDS_FILE, 'utf-8'));
+  }
+} catch (err) {
+  console.error('Erreur lors du chargement des imageBoards:', err);
+}
+
+function saveImageBoards() {
+  try {
+    fs.writeFileSync(IMAGEBOARDS_FILE, JSON.stringify(imageBoards, null, 2));
+  } catch (err) {
+    console.error('Erreur lors de la sauvegarde des imageBoards:', err);
+  }
+}
 
 // ==========================================
 // CUSTOM FURNITURE STATE
@@ -277,6 +294,7 @@ io.on('connection', (socket) => {
   // Gestion des Tableaux d'Images
   socket.on('IMAGEBOARD_UPDATE', ({ boardId, image }) => {
     imageBoards[boardId] = image;
+    saveImageBoards();
     socket.broadcast.emit('IMAGEBOARD_UPDATE', { boardId, image });
   });
 
