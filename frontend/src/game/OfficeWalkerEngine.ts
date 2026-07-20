@@ -2537,9 +2537,10 @@ export class OfficeGame {
   }
 }
 
+let previewAssets: Assets | null = null;
 export function renderSkinPreview(canvas: HTMLCanvasElement, skin: any) {
-  const assets = new Assets();
-  const sprites = assets.generatePlayerSprites(skin);
+  if (!previewAssets) previewAssets = new Assets();
+  const sprites = previewAssets.generatePlayerSprites(skin);
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   
