@@ -7,7 +7,7 @@ interface CheatPanelProps {
   onUnequipSword?: () => void;
 }
 
-export const CheatPanel: React.FC<CheatPanelProps> = ({ onClose, onEquipSword, onUnequipSword }) => {
+export const CheatPanel: React.FC<CheatPanelProps> = ({ onClose, onEquipSword }) => {
   return (
     <div className="cheat-panel-overlay">
       <div className="cheat-panel">
