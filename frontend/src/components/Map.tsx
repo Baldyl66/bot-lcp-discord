@@ -4,6 +4,8 @@ import { io } from 'socket.io-client';
 import YouTube from 'react-youtube';
 import './OfficeWalker.css';
 import { WhiteboardModal } from './WhiteboardModal';
+import { ImageBoardModal } from './ImageBoardModal';
+import { CheatPanel } from './CheatPanel';
 
 export const MapComponent: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -24,10 +26,16 @@ export const MapComponent: React.FC = () => {
   const cinemaDivRef = useRef<HTMLDivElement>(null);
   const ytPlayerRef = useRef<any>(null);
 
+  const [showCheatPanel, setShowCheatPanel] = useState(false);
+  const [hasWeapon, setHasWeapon] = useState(false);
+
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [whiteboardLines, setWhiteboardLines] = useState<any[]>([]);
+  const [imageBoards, setImageBoards] = useState<Record<string, string>>({});
+  const [showImageBoard, setShowImageBoard] = useState<string | null>(null);
 
   const [isBuildMode, setIsBuildMode] = useState(false);
+  const [buildRotation, setBuildRotation] = useState<number>(0);
   const [selectedFurniture, setSelectedFurniture] = useState<string | null>(null);
   const [customFurniture, setCustomFurniture] = useState<any[]>([]);
 
@@ -45,7 +53,7 @@ export const MapComponent: React.FC = () => {
   const socketRef = useRef<any>(null);
 
   const isAdmin = user?.id === '829365573766479883';
-  const furnitureTypes = ['plant1x1', 'watercooler1x1', 'bonsai1x1', 'chair1x1', 'speaker1x1', 'micstand1x1', 'lantern1x1', 'zabuton1x1', 'couch2x1', 'tv2x1', 'arcade2x1', 'futon1x2', 'desk2x2', 'drumkit2x2', 'kotatsu2x2', 'piano3x1', 'whiteboard4x1', 'mixingdesk3x2', 'shoji4x1', 'counter6x2'];
+  const furnitureTypes = ['plant1x1', 'watercooler1x1', 'bonsai1x1', 'chair1x1', 'speaker1x1', 'micstand1x1', 'lantern1x1', 'zabuton1x1', 'couch2x1', 'tv2x1', 'arcade2x1', 'futon1x2', 'desk2x2', 'drumkit2x2', 'kotatsu2x2', 'piano3x1', 'whiteboard4x1', 'mixingdesk3x2', 'shoji4x1', 'counter6x2', 'imageboard2x2', 'imageboard4x2'];
 
   const furnitureNames: Record<string, string> = {
     'plant1x1': 'Plante',
@@ -67,7 +75,9 @@ export const MapComponent: React.FC = () => {
     'whiteboard4x1': 'Tableau blanc',
     'mixingdesk3x2': 'Table de mixage',
     'shoji4x1': 'Paravent Shoji',
-    'counter6x2': 'Grand Comptoir'
+    'counter6x2': 'Grand Comptoir',
+    'imageboard2x2': 'Tableau Image',
+    'imageboard4x2': 'Tableau Image Large'
   };
 
 
@@ -173,11 +183,18 @@ export const MapComponent: React.FC = () => {
         }
       }
 
+      if (gameRef.current) {
+        gameRef.current.isMapLoaded = true;
+      }
+
       if (data && data.youtubeState) {
         setYoutubeState(data.youtubeState);
       }
       if (data.whiteboardLines) {
         setWhiteboardLines(data.whiteboardLines);
+      }
+      if (data.imageBoards) {
+        setImageBoards(data.imageBoards);
       }
     });
 
@@ -215,6 +232,14 @@ export const MapComponent: React.FC = () => {
 
     socket.on('WHITEBOARD_CLEAR', () => {
       setWhiteboardLines([]);
+    });
+
+    socket.on('IMAGEBOARD_UPDATE', ({ boardId, image }: any) => {
+      setImageBoards((prev) => ({ ...prev, [boardId]: image }));
+    });
+
+    gameRef.current?.bus.on('imageboard_clicked', (boardId: string) => {
+      setShowImageBoard(boardId);
     });
 
     socket.on('virtual_world_event', (event: any) => {
@@ -322,6 +347,12 @@ export const MapComponent: React.FC = () => {
   }, [whiteboardLines]);
 
   useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.map.imageBoards = imageBoards;
+    }
+  }, [imageBoards]);
+
+  useEffect(() => {
     if (!isDraggingMenu) return;
     const handleMove = (e: MouseEvent) => {
       setMenuPos({
@@ -370,12 +401,19 @@ export const MapComponent: React.FC = () => {
           w = parseInt(match[1]);
           h = parseInt(match[2]);
         }
+        if (buildRotation === 90 || buildRotation === 270) {
+          const temp = w;
+          w = h;
+          h = temp;
+        }
         if (r + h - 1 >= 24 || c + w - 1 >= 55) return;
 
         const newLayout = [...customFurniture, {
           id: Math.random().toString(36).substring(2, 9),
           type: selectedFurniture,
-          r1: r, c1: c, r2: r + h - 1, c2: c + w - 1
+          r1: r, c1: c,
+          r2: r + h - 1, c2: c + w - 1,
+          dir: buildRotation
         }];
         setCustomFurniture(newLayout);
         socketRef.current.emit('SYNC_FURNITURE', { hasCustomLayout: true, furniture: newLayout });
@@ -430,19 +468,53 @@ export const MapComponent: React.FC = () => {
       }
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isBuildMode && (e.key === 'r' || e.key === 'R')) {
+        setBuildRotation(prev => (prev + 90) % 360);
+        
+        if (isDraggingRef.current && dragTargetIdRef.current) {
+          const targetId = dragTargetIdRef.current;
+          setCustomFurniture(prev => {
+            const newLayout = prev.map(f => {
+              if (f.id === targetId) {
+                const currentDir = f.dir || 0;
+                const nextDir = (currentDir + 90) % 360;
+                const w = f.c2 - f.c1 + 1;
+                const h = f.r2 - f.r1 + 1;
+                return { ...f, dir: nextDir, r2: f.r1 + w - 1, c2: f.c1 + h - 1 };
+              }
+              return f;
+            });
+            if (socketRef.current) {
+              socketRef.current.emit('SYNC_FURNITURE', { hasCustomLayout: true, furniture: newLayout });
+            }
+            return newLayout;
+          });
+        }
+      }
+    };
+
     canvasRef.current.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('keydown', handleKeyDown);
     
     return () => {
       canvasRef.current?.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isBuildMode, selectedFurniture, customFurniture]);
+  }, [isBuildMode, selectedFurniture, customFurniture, buildRotation]);
 
   const handleSendMessage = () => {
     if (!chatMessage.trim() || !currentZone || !currentZone.textChannelId || !socketRef.current || !user) return;
+
+    if (chatMessage.trim().toLowerCase() === '/cheat') {
+      setShowCheatPanel(true);
+      setChatMessage("");
+      return;
+    }
 
     const ytMatch = chatMessage.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
     if (ytMatch) {
@@ -770,7 +842,37 @@ export const MapComponent: React.FC = () => {
           </div>
         </div>
 
+        {showCheatPanel && (
+          <CheatPanel
+            onClose={() => setShowCheatPanel(false)}
+            onEquipSword={() => {
+              if (gameRef.current) {
+                gameRef.current.equipSword();
+                setHasWeapon(true);
+              }
+            }}
+          />
+        )}
 
+        {hasWeapon && (
+          <button 
+            onClick={() => {
+              if (gameRef.current) gameRef.current.unequipSword();
+              setHasWeapon(false);
+            }}
+            style={{ 
+              position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', 
+              zIndex: 100, padding: '10px 20px', borderRadius: '20px', 
+              background: 'rgba(239, 68, 68, 0.9)', color: 'white', fontWeight: 'bold', 
+              border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+              fontSize: '14px', transition: 'transform 0.1s'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)')}
+            onMouseOut={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1)')}
+          >
+            🖐️ Ranger l'Épée
+          </button>
+        )}
 
         {isBuildMode && (
           <div className="admin-build-toolbar" style={{
@@ -794,6 +896,9 @@ export const MapComponent: React.FC = () => {
               Outils de Construction
             </h3>
             <p style={{ fontSize: '12px', color: '#aaa', textAlign: 'center' }}>Sélectionnez un élément, puis cliquez sur la carte pour le placer/supprimer.</p>
+            <p style={{ fontSize: '13px', color: '#f1c40f', textAlign: 'center', fontWeight: 'bold' }}>
+              Rotation actuelle: {buildRotation}° (Appuyez sur 'R')
+            </p>
 
             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
               <button
@@ -975,6 +1080,18 @@ export const MapComponent: React.FC = () => {
           onClose={() => setShowWhiteboard(false)}
           onDrawLocally={(line) => setWhiteboardLines((prev) => [...prev, line])}
           onClearLocally={() => setWhiteboardLines([])}
+        />
+      )}
+
+      {showImageBoard && (
+        <ImageBoardModal
+          boardId={showImageBoard}
+          currentImage={imageBoards[showImageBoard] || null}
+          onUpload={(boardId, image) => {
+            setImageBoards(prev => ({ ...prev, [boardId]: image }));
+            socketRef.current?.emit('IMAGEBOARD_UPDATE', { boardId, image });
+          }}
+          onClose={() => setShowImageBoard(null)}
         />
       )}
     </div>

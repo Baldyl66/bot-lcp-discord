@@ -1,0 +1,68 @@
+.cheat-panel-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.cheat-panel {
+  background: #1e1e24;
+  border: 2px solid #ff4757;
+  border-radius: 12px;
+  width: 400px;
+  color: white;
+  box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
+}
+
+.cheat-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #333;
+  background: #2b2b36;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.cheat-panel-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #ff4757;
+}
+
+.cheat-panel-content {
+  padding: 20px;
+}
+
+.cheat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.cheat-btn {
+  background: #2f3542;
+  border: 1px solid #57606f;
+  color: white;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.cheat-btn:hover:not(.disabled) {
+  background: #ff4757;
+  border-color: #ff4757;
+}
+
+.cheat-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

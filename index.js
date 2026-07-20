@@ -341,6 +341,18 @@ backendSocket.on("MOVE_USER_DISCORD", async ({ userId, channelId }) => {
   }
 });
 
+backendSocket.on("PUNISH_USER_DISCORD", async ({ userId }) => {
+  try {
+    const guild = await client.guilds.fetch(VIRTUAL_WORLD_GUILD_ID);
+    const member = await guild.members.fetch(userId);
+    if (member && member.voice.channel) {
+      await member.voice.setChannel('1528806784373100636');
+      console.log(`[Virtual World] Punition exécutée : ${member.user.username} envoyé en prison.`);
+    }
+  } catch (e) {
+    console.error("[Virtual World] Erreur lors de la punition Discord:", e.message);
+  }
+});
 backendSocket.on("DISCORD_SEND_WEBHOOK_MESSAGE", async ({ userId, username, avatarUrl, channelId, content }) => {
   try {
     const channel = await client.channels.fetch(channelId);

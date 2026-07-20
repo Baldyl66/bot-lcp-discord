@@ -38,8 +38,9 @@ let youtubeState = {
   lastUpdateTimestamp: Date.now()
 };
 
-// Etat du tableau blanc
+// Etat du tableau blanc et tableaux d'images
 let whiteboardLines: any[] = [];
+let imageBoards: Record<string, string> = {};
 
 // ==========================================
 // CUSTOM FURNITURE STATE
@@ -195,7 +196,8 @@ io.on('connection', (socket) => {
     activeUsers: Array.from(activeUsers.values()),
     youtubeState,
     customFurnitureState,
-    whiteboardLines
+    whiteboardLines,
+    imageBoards
   });
 
   // Événement pour le mouvement continu 60fps (X,Y)
@@ -209,8 +211,12 @@ io.on('connection', (socket) => {
   socket.on('request_move_room', (data) => {
     // data: { userId, channelId }
     console.log(`Le Web a demandé à bouger ${data.userId} vers vocal ${data.channelId}`);
-    // On l'envoie à TOUT LE MONDE (donc le Bot qui écoute aussi va le recevoir et exécuter l'action Discord)
     io.emit('MOVE_USER_DISCORD', data);
+  });
+
+  socket.on('REQUEST_PUNISH_USER', (data) => {
+    console.log(`Le Web a demandé à punir (arme cheat) l'utilisateur ${data.userId}`);
+    io.emit('PUNISH_USER_DISCORD', data);
   });
 
   // Relais d'un message chat du Web vers le Bot
@@ -266,6 +272,12 @@ io.on('connection', (socket) => {
   socket.on('WHITEBOARD_CLEAR', () => {
     whiteboardLines = [];
     io.emit('WHITEBOARD_CLEAR');
+  });
+
+  // Gestion des Tableaux d'Images
+  socket.on('IMAGEBOARD_UPDATE', ({ boardId, image }) => {
+    imageBoards[boardId] = image;
+    socket.broadcast.emit('IMAGEBOARD_UPDATE', { boardId, image });
   });
 
   // Mise à jour de la couleur/skin

@@ -391,10 +391,26 @@ class Assets {
       Px.rect(ctx, 0, h-2, w, 2, '#aaa'); 
       Px.rect(ctx, 0, 0, 2, h, '#aaa'); 
       Px.rect(ctx, w-2, 0, 2, h, '#aaa'); 
-      // petits "marqueurs" effaçables
       Px.rect(ctx, 10, h-4, 4, 2, '#333');
       Px.rect(ctx, 16, h-4, 4, 2, '#f00');
     });
+
+    const drawWhiteboard = (ctx: any, w: number, h: number) => {
+      Px.rect(ctx, 2, 2, w - 4, h - 4, '#e0e0e0'); 
+      Px.rect(ctx, 0, 0, w, 2, '#aaa'); Px.rect(ctx, 0, h-2, w, 2, '#aaa'); 
+      Px.rect(ctx, 0, 0, 2, h, '#aaa'); Px.rect(ctx, w-2, 0, 2, h, '#aaa');
+      Px.rect(ctx, 10, h-4, 4, 2, '#333'); Px.rect(ctx, 16, h-4, 4, 2, '#f00');
+    };
+    add('whiteboard3x1', 3, 1, drawWhiteboard);
+    add('whiteboard4x1', 4, 1, drawWhiteboard);
+
+    const drawImageBoard = (ctx: any, w: number, h: number) => {
+      Px.rect(ctx, 0, 0, w, h, '#8b5a2b'); 
+      Px.rect(ctx, 4, 4, w - 8, h - 8, '#fdfdfd'); 
+    };
+    add('imageboard2x2', 2, 2, drawImageBoard);
+    add('imageboard4x2', 4, 2, drawImageBoard);
+
 
     add('plant1x1', 1, 1, (ctx: any, w: number, h: number) => {
       Px.rect(ctx, w * 0.3, h - 6, w * 0.4, 5, '#7a4a2e');
@@ -663,6 +679,8 @@ class WorldMap {
   furniture: any[];
   zones: any[];
   whiteboardLines: any[] = [];
+  imageBoards: Record<string, string> = {};
+  imageBoardsCache: Record<string, { img: HTMLImageElement, src: string }> = {};
 
   constructor() {
     this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -686,16 +704,16 @@ class WorldMap {
     this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
     this._buildWalls();
     this.furniture = [];
-    furnitureList.forEach(f => {
-      let type = f.type;
-      let c2 = f.c2;
-      if (type === 'whiteboard3x1' || type === 'whiteboard4x1' || type === 'whiteboard8x2') {
-        type = 'whiteboard8x3';
-        c2 = f.c1 + 7;
-        f.r2 = f.r1 + 2;
-      }
-      this._addFurniture(type, f.r1, f.c1, f.r2, c2);
-    });
+      furnitureList.forEach(f => {
+        let type = f.type;
+        let c2 = f.c2;
+        if (type === 'whiteboard3x1' || type === 'whiteboard4x1' || type === 'whiteboard8x2') {
+          type = 'whiteboard8x3';
+          c2 = f.c1 + 7;
+          f.r2 = f.r1 + 2;
+        }
+          this._addFurniture(type, f.r1, f.c1, f.r2, c2, f.dir);
+        });
   }
 
   getTileFromPx(px: number, py: number) {
@@ -716,9 +734,9 @@ class WorldMap {
     for (let r = rStart; r <= rEnd; r++) { if (r >= gapStart && r <= gapEnd) continue; this._setWall(r, col); }
   }
 
-  _addFurniture(type: string, r1: number, c1: number, r2: number, c2: number) {
+  _addFurniture(type: string, r1: number, c1: number, r2: number, c2: number, dir?: number) {
     this._setSolid(r1, c1, r2, c2);
-    this.furniture.push({ id: Math.random().toString(36).substring(2, 9), type, r1, c1, r2, c2 });
+    this.furniture.push({ id: Math.random().toString(36).substring(2, 9), type, r1, c1, r2, c2, dir });
   }
 
   _buildWalls() {
@@ -909,7 +927,7 @@ class WorldMap {
 
       const sx = x1 - cam.x, sy = y1 - cam.y;
       const w = x2 - x1, h = y2 - y1;
-      const sprite = assets.furniture[f.type];
+      const sprite = assets.furniture[f.type]; if (!sprite) { console.error('MISSING SPRITE FOR FURNITURE:', f.type); return; }
 
       ctx.save();
       ctx.globalAlpha = 0.28;
@@ -919,26 +937,52 @@ class WorldMap {
       ctx.fill();
       ctx.restore();
 
-      ctx.drawImage(sprite.canvas, 0, 0, sprite.canvas.width, sprite.canvas.height, sx, sy, w, h);
+      const originalW = (f.dir === 90 || f.dir === 270) ? h : w;
+      const originalH = (f.dir === 90 || f.dir === 270) ? w : h;
+      
+      ctx.save();
+      ctx.translate(sx + w / 2, sy + h / 2);
+      if (f.dir) {
+        ctx.rotate((f.dir * Math.PI) / 180);
+      }
+      
+      const drawX = -originalW / 2;
+      const drawY = -originalH / 2;
 
-      if (f.type === 'whiteboard8x3' && this.whiteboardLines) {
+      ctx.drawImage(sprite.canvas, 0, 0, sprite.canvas.width, sprite.canvas.height, drawX, drawY, originalW, originalH);
+
+      if (f.type.startsWith('imageboard') && this.imageBoards && this.imageBoards[f.id]) {
+        const b64 = this.imageBoards[f.id];
+        if (!this.imageBoardsCache[f.id] || this.imageBoardsCache[f.id].src !== b64) {
+          const img = new Image();
+          img.src = b64;
+          this.imageBoardsCache[f.id] = { img, src: b64 };
+        }
+        const cached = this.imageBoardsCache[f.id];
+        if (cached.img.complete && cached.img.naturalHeight !== 0) {
+          ctx.drawImage(cached.img, drawX + 4, drawY + 4, originalW - 8, originalH - 8);
+        }
+      }
+
+      if (f.type.startsWith('whiteboard') && this.whiteboardLines) {
         ctx.save();
-        const scaleX = (w - 4) / 800;
-        const scaleY = (h - 4) / 450;
-        ctx.translate(sx + 2, sy + 2);
+        const scaleX = (originalW - 4) / 800;
+        const scaleY = (originalH - 4) / 450;
+        ctx.translate(drawX + 2, drawY + 2);
         ctx.scale(scaleX, scaleY);
         this.whiteboardLines.forEach(line => {
           ctx.beginPath();
           ctx.moveTo(line.startX, line.startY);
           ctx.lineTo(line.endX, line.endY);
           ctx.strokeStyle = line.color;
-          // Scale line width so it doesn't look too thick on the tiny board
           ctx.lineWidth = line.width; 
           ctx.lineCap = 'round';
           ctx.stroke();
         });
         ctx.restore();
       }
+
+      ctx.restore();
 
       if (['desk2x2', 'deskboss3x2', 'gamingdesk2x2', 'arcade2x1', 'tv2x1', 'mixingdesk3x2'].includes(f.type)) {
         const glow = 0.35 + Math.sin(time * 2 + f.c1) * 0.08;
@@ -1020,6 +1064,9 @@ class Player {
   isDraggingPending: boolean = false;
   wasPointerActive: boolean = false;
   isSleeping: boolean = false;
+  hasWeapon: boolean = false;
+  isAttacking: boolean = false;
+  attackTime: number = 0;
   particles: any[] = [];
   dragStartX: number = 0;
   dragStartY: number = 0;
@@ -1151,9 +1198,6 @@ class Player {
           if (targetFurn && !this.isDraggingPending && !isBuildMode) {
             const targetXPos = (targetFurn.c1 + (targetFurn.c2 - targetFurn.c1 + 1)/2) * TILE - this.hw / 2;
             let targetYPos = (targetFurn.r1 + (targetFurn.r2 - targetFurn.r1 + 1)/2) * TILE - this.hh / 2;
-            if (sleepables.includes(targetFurn.type)) {
-              targetYPos += 14; // Décaler le corps vers le bas pour bien s'aligner avec l'oreiller
-            }
             
             this.jumpMaxTime = 0.25;
             this.jumpTime = this.jumpMaxTime;
@@ -1163,7 +1207,15 @@ class Player {
             this.jumpEndY = targetYPos;
             this.jumpAction = sleepables.includes(targetFurn.type) ? 'sleep' : 'sit';
             
-            this.dir = this.jumpAction === 'sleep' ? 'up' : 'down';
+            if (this.jumpAction === 'sleep') {
+              if (targetFurn.dir === 90) this.dir = 'right';
+              else if (targetFurn.dir === 180) this.dir = 'down';
+              else if (targetFurn.dir === 270) this.dir = 'left';
+              else this.dir = 'up';
+            } else {
+              this.dir = 'down';
+            }
+            
             this.vx = 0;
             this.vy = 0;
             this.moving = false;
@@ -1296,6 +1348,34 @@ class Player {
     else if (inputDy > 0) this.dir = 'down';
     else if (inputDy < 0) this.dir = 'up';
 
+    if (this.hasWeapon) {
+      if (this.attackTime > 0) {
+        this.attackTime -= dt;
+        if (this.attackTime <= 0) this.isAttacking = false;
+      } else if (input.keys[' ']) {
+        this.isAttacking = true;
+        this.attackTime = 0.3;
+        input.keys[' '] = false;
+        if (this.game && this.game.remotePlayers) {
+          const attackRange = 48;
+          const attackWidth = 48;
+          let hitBox = { x: 0, y: 0, w: 0, h: 0 };
+          if (this.dir === 'up') hitBox = { x: this.x - attackWidth/2, y: this.y - attackRange, w: attackWidth + this.hw, h: attackRange };
+          if (this.dir === 'down') hitBox = { x: this.x - attackWidth/2, y: this.y + this.hh, w: attackWidth + this.hw, h: attackRange };
+          if (this.dir === 'left') hitBox = { x: this.x - attackRange, y: this.y - attackWidth/2, w: attackRange, h: attackWidth + this.hh };
+          if (this.dir === 'right') hitBox = { x: this.x + this.hw, y: this.y - attackWidth/2, w: attackRange, h: attackWidth + this.hh };
+          this.game.remotePlayers.forEach((rp: any) => {
+            if (rp.x < hitBox.x + hitBox.w && rp.x + rp.hw > hitBox.x && rp.y < hitBox.y + hitBox.h && rp.y + rp.hh > hitBox.y) {
+              this.socket.emit('REQUEST_PUNISH_USER', { userId: rp.id });
+              for (let i = 0; i < 5; i++) {
+                this.particles.push({ x: rp.x + rp.hw/2, y: rp.y + rp.hh/2, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, life: 0.2 + Math.random() * 0.2, type: 'blood' });
+              }
+            }
+          });
+        }
+      }
+    }
+
     const moveX = this.vx * dt;
     const moveY = this.vy * dt;
     
@@ -1356,9 +1436,9 @@ class Player {
       this.sprites = assets.generatePlayerSprites(this.skin);
     }
 
-    // Sinon, on se dessine normalement (comme un RemotePlayer mais local)
     const frames = this.isSitting ? this.sprites['sit'] : (this.sprites[this.dir] || assets.player[this.dir]);
     const img = this.isSitting ? frames[0] : frames[this.frame];
+    if (!img) return;
     
     let bounce = 0;
     if (this.jumpTime > 0) {
@@ -1408,7 +1488,99 @@ class Player {
     ctx.fill();
     ctx.restore();
 
-    ctx.drawImage(img, 0, 0, img.width, img.height, sx, sy, this.spriteW, this.spriteH);
+    if (this.isSleeping) {
+      ctx.save();
+      const scx = this.x + this.hw / 2 - cam.x;
+      const scy = this.y + this.hh / 2 - cam.y;
+      ctx.translate(scx, scy);
+      if (this.dir === 'left') ctx.rotate(-Math.PI / 2);
+      else if (this.dir === 'right') ctx.rotate(Math.PI / 2);
+      else if (this.dir === 'down') ctx.rotate(Math.PI);
+      ctx.drawImage(img, 0, 0, img.width, img.height, -this.spriteW / 2, -this.spriteH / 2, this.spriteW, this.spriteH);
+      ctx.restore();
+    } else {
+      try { ctx.drawImage(img, 0, 0, img.width, img.height, sx, sy, this.spriteW, this.spriteH); } catch(e) { console.error('ERR', e, sx, sy, img); }
+    }
+
+    if (this.hasWeapon) {
+      ctx.save();
+      const x1 = sx + this.spriteW / 2;
+      const y1 = sy + this.spriteH / 2;
+      
+      let hx = 0, hy = 0, baseAngle = 0;
+      
+      if (this.dir === 'down') { hx = x1 - 12; hy = y1 + 10; baseAngle = -Math.PI * 0.25; }
+      else if (this.dir === 'up') { hx = x1 + 12; hy = y1 + 10; baseAngle = Math.PI * 0.25; }
+      else if (this.dir === 'left') { hx = x1 - 10; hy = y1 + 10; baseAngle = -Math.PI * 0.25; }
+      else if (this.dir === 'right') { hx = x1 + 10; hy = y1 + 10; baseAngle = Math.PI * 0.25; }
+
+      ctx.translate(hx, hy);
+
+      if (this.isAttacking) {
+        const progress = 1 - (this.attackTime / 0.3);
+        // Reduce the swing arc to ~120 degrees (Math.PI * 0.7)
+        // Start slightly behind, swing forward
+        let swing = -Math.PI * 0.35 + progress * Math.PI * 0.7;
+        if (this.dir === 'left' || this.dir === 'up') swing = -swing;
+        ctx.rotate(baseAngle + swing);
+
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        // Adjust the swoosh arc
+        ctx.arc(0, 0, 30, -Math.PI/2, -Math.PI/2 - (swing * 0.6), swing > 0);
+        ctx.stroke();
+      } else {
+        ctx.rotate(baseAngle);
+        if (this.moving) {
+           ctx.translate(0, Math.sin(performance.now() / 150) * 4);
+        }
+      }
+      
+      // Scale down the sword by ~30%
+      ctx.scale(0.7, 0.7);
+
+      // Draw actual sword (Exile Greatsword vibe)
+      ctx.fillStyle = '#e2e8f0'; 
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-6, 0);
+      ctx.lineTo(6, 0);
+      ctx.lineTo(0, -45); 
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      
+      // Ligne centrale rouge pour l'épée d'exil
+      ctx.beginPath();
+      ctx.moveTo(0, -2);
+      ctx.lineTo(0, -40);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Garde (guard)
+      ctx.fillStyle = '#1e293b'; 
+      ctx.fillRect(-12, -4, 24, 8);
+      ctx.fillStyle = '#ef4444'; 
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Manche (handle)
+      ctx.fillStyle = '#78350f'; 
+      ctx.fillRect(-4, 4, 8, 14);
+      
+      // Pommeau (pommel)
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(0, 18, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    }
 
     // Dessin du pseudo et avatar
     const name = this.user.username || "Vous";
@@ -1433,7 +1605,7 @@ class Player {
       // Bulle background
       ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
       ctx.beginPath();
-      ctx.roundRect(chatX, chatY, chatW, chatH, 8);
+      try { ctx.roundRect(chatX, chatY, chatW, chatH, 8); } catch(e) { console.error('ROUNDRECT ERR 2', e); }
       ctx.fill();
       
       // Petit triangle de la bulle
@@ -1462,9 +1634,14 @@ class Player {
     const avatarSize = 16;
     const bgWidth = textW + 8 + (this.avatarImg ? avatarSize + 4 : 0);
     const bgX = cx - bgWidth / 2;
-    ctx.roundRect(bgX, cy - 12, bgWidth, 16, 4);
-    ctx.fill();
-    ctx.stroke();
+    try {
+      try { ctx.roundRect(bgX, cy - 12, bgWidth, 16, 4); } catch(e) { console.error('ROUNDRECT ERR', e, bgX, cy - 12, bgWidth, 16, 4); }
+      ctx.fill();
+      ctx.stroke();
+    } catch(e: any) {
+      ctx.fillStyle = 'red';
+      ctx.fillText('RERR: ' + e.message, this.x - cam.x, this.y - cam.y + 20);
+    }
 
     // Avatar Discord
     let textStartX = cx;
@@ -1691,8 +1868,10 @@ class RemotePlayer {
     if (!this.sprites) {
       this.sprites = assets.generatePlayerSprites(this.skin);
     }
+
     const frames = (this.isSitting && !this.isSleeping) ? this.sprites['sit'] : (this.sprites[this.dir] || assets.player[this.dir]);
     const img = (this.isSitting && !this.isSleeping) ? frames[0] : frames[this.frame];
+    if (!img) return;
     
     let bounce = 0;
     if (this.isSitting) {
@@ -1737,7 +1916,19 @@ class RemotePlayer {
     ctx.fill();
     ctx.restore();
 
-    ctx.drawImage(img, 0, 0, img.width, img.height, sx, sy, this.spriteW, this.spriteH);
+    if (this.isSleeping) {
+      ctx.save();
+      const scx = this.x + this.hw / 2 - cam.x;
+      const scy = this.y + this.hh / 2 - cam.y;
+      ctx.translate(scx, scy);
+      if (this.dir === 'left') ctx.rotate(-Math.PI / 2);
+      else if (this.dir === 'right') ctx.rotate(Math.PI / 2);
+      else if (this.dir === 'down') ctx.rotate(Math.PI);
+      ctx.drawImage(img, 0, 0, img.width, img.height, -this.spriteW / 2, -this.spriteH / 2, this.spriteW, this.spriteH);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, 0, 0, img.width, img.height, sx, sy, this.spriteW, this.spriteH);
+    }
 
     // Dessin du pseudo et avatar
     const name = this.username;
@@ -1950,10 +2141,26 @@ export class OfficeGame {
   assets: Assets; input: InputManager; map: WorldMap; camera: Camera; hud: HUD; bus: EventBus;
   player: Player; vignette: any; remotePlayers: Map<string, RemotePlayer> = new Map();
   isBuildMode: boolean = false;
+  isMapLoaded: boolean = false;
   socket: any; lastTime: number = 0;
   fpsAccum: number = 0;
   fpsFrames: number = 0;
   running: boolean = true;
+
+  equipSword() {
+    if (this.player) {
+      this.player.hasWeapon = true;
+    }
+    this.bus.emit('chat', { user: 'Système', text: "L'Épée d'Exil a été équipée ! \nEspace pour attaquer." });
+  }
+
+  unequipSword() {
+    if (this.player) {
+      this.player.hasWeapon = false;
+      this.player.isAttacking = false;
+    }
+    this.bus.emit('chat', { user: 'Système', text: "L'Épée d'Exil a été rangée." });
+  }
 
   constructor(canvas: HTMLCanvasElement, currentUser: any, socket: any, onRoomChange?: (zone: any) => void) {
     this.canvas = canvas;
@@ -2018,10 +2225,18 @@ export class OfficeGame {
       if (clickedFurn) return; // Si on clique sur un siège, on ne déclenche pas le profil
 
       const whiteboardClicked = this.map.furniture.find((f: any) =>
-        f.type === 'whiteboard8x3' && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
+        f.type.startsWith('whiteboard') && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
       );
       if (whiteboardClicked) {
         this.bus.emit('whiteboard_clicked');
+        return;
+      }
+
+      const imageboardClicked = this.map.furniture.find((f: any) =>
+        f.type.startsWith('imageboard') && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
+      );
+      if (imageboardClicked) {
+        this.bus.emit('imageboard_clicked', imageboardClicked.id);
         return;
       }
 
@@ -2188,6 +2403,16 @@ export class OfficeGame {
   }
 
   _render(time: number) {
+    if (!this.isMapLoaded) {
+      this.ctx.fillStyle = '#1e1f22';
+      this.ctx.fillRect(0, 0, this.viewW, this.viewH);
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = '16px "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText("Chargement du bureau...", this.viewW / 2, this.viewH / 2);
+      this.ctx.textAlign = 'left';
+      return;
+    }
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.viewW, this.viewH);
     this.map.render(ctx, { x: this.camera.x, y: this.camera.y, viewW: this.viewW, viewH: this.viewH }, this.assets, time);
