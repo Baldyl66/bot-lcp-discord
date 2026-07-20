@@ -7,3 +7,6 @@ body, html {
 * {
   box-sizing: inherit;
 }
+
+body, html { overflow: hidden; }
+

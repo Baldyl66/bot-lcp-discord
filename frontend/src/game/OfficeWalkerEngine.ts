@@ -32,6 +32,45 @@ class Px {
     ctx.fillStyle = color;
     ctx.fillRect(Math.round(x), Math.round(y), w, h);
   }
+
+  // Contour de silhouette 1px : détoure automatiquement n'importe quel sprite
+  // pour qu'il se détache proprement du sol, sans retoucher chaque dessin.
+  static outline(canvas: HTMLCanvasElement, color = 'rgba(20,16,14,0.55)') {
+    const ctx = canvas.getContext('2d')!;
+    const w = canvas.width, h = canvas.height;
+    if (w === 0 || h === 0) return;
+    const src = ctx.getImageData(0, 0, w, h).data;
+    const alphaAt = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h) ? 0 : src[(y * w + x) * 4 + 3];
+    ctx.fillStyle = color;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (alphaAt(x, y) > 10) continue;
+        if (alphaAt(x - 1, y) > 10 || alphaAt(x + 1, y) > 10 || alphaAt(x, y - 1) > 10 || alphaAt(x, y + 1) > 10) {
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+  }
+
+  // Volume / éclairage ambiant : lumière douce en haut, ombre douce en bas.
+  // 'source-atop' ne peint que sur les pixels déjà opaques du sprite => respecte sa forme.
+  static addVolume(ctx: CanvasRenderingContext2D, w: number, h: number, top = 0.16, bottom = 0.22) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, `rgba(255,255,255,${top})`);
+    grad.addColorStop(0.45, 'rgba(255,255,255,0)');
+    grad.addColorStop(1, `rgba(0,0,0,${bottom})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    // Léger liseré de lumière rasante sur le bord gauche (profondeur)
+    const rim = ctx.createLinearGradient(0, 0, Math.min(4, w), 0);
+    rim.addColorStop(0, 'rgba(255,255,255,0.10)');
+    rim.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = rim;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
 }
 
 class EventBus {
@@ -58,7 +97,12 @@ class Assets {
   }
 
   _buildFloors() {
-    const mk = (drawFn: any) => { const { c, ctx } = Px.canvas(ART, ART); drawFn(ctx); return c; };
+    const mk = (drawFn: any) => {
+      const { c, ctx } = Px.canvas(ART, ART);
+      drawFn(ctx);
+      Px.addVolume(ctx, ART, ART, 0.05, 0.10); // très subtil pour que les tuiles se raccordent sans coutures visibles
+      return c;
+    };
 
     this.floors.reception = mk((ctx: any) => {
       Px.rect(ctx, 0, 0, ART, ART, '#8a6a49');
@@ -138,6 +182,7 @@ class Assets {
     Px.rect(ctx, 0, ART - 4, ART, 4, '#8a8f99');
     Px.rect(ctx, 0, ART - 4, ART, 1, '#6f757f');
     for (let x = 0; x < ART; x += 8) Px.rect(ctx, x, 2, 1, ART - 6, '#bcc1c9');
+    Px.addVolume(ctx, ART, ART, 0.10, 0.14);
     this.wall = c;
   }
 
@@ -159,6 +204,8 @@ class Assets {
     const add = (key: string, wt: number, ht: number, drawFn: any) => {
       const { c, ctx } = Px.canvas(wt * ART, ht * ART);
       drawFn(ctx, wt * ART, ht * ART);
+      Px.addVolume(ctx, wt * ART, ht * ART);   // lumière douce en haut / ombre douce en bas -> impression de relief
+      Px.outline(c);                            // détoure le mobilier pour qu'il se détache nettement du sol
       this.furniture[key] = { canvas: c, wTiles: wt, hTiles: ht };
     };
 
@@ -211,6 +258,14 @@ class Assets {
       Px.circle(ctx, w/2, h/2 + 4, w*0.15, '#222');
     });
 
+    add('micstand1x1', 1, 1, (ctx: any, w: number, h: number) => {
+      // Pied trépied (vu de dessus, silhouette simplifiée)
+      Px.circle(ctx, w / 2, h * 0.78, 3, '#2a2a2a');
+      Px.rect(ctx, w / 2 - 1, h * 0.5, 2, h * 0.34, '#4a4a4a'); // tige
+      Px.circle(ctx, w / 2, h * 0.34, 3.5, '#161616'); // capsule micro
+      Px.circle(ctx, w / 2 - 1, h * 0.32, 1, '#3a3a3a'); // reflet
+    });
+
     add('piano3x1', 3, 1, (ctx: any, w: number, h: number) => {
       Px.rect(ctx, 2, 2, w - 4, h - 4, '#111');
       Px.rect(ctx, 4, h/2, w - 8, h/2 - 2, '#fff');
@@ -252,6 +307,19 @@ class Assets {
       Px.circle(ctx, w*0.5, h*0.3, 7, '#2f6636');
       Px.circle(ctx, w*0.3, h*0.4, 5, '#3b7d43');
       Px.circle(ctx, w*0.7, h*0.35, 6, '#234f29');
+    });
+
+    add('lantern1x1', 1, 1, (ctx: any, w: number, h: number) => {
+      // Pied en bois
+      Px.rect(ctx, w/2 - 1, h*0.72, 2, h*0.22, '#3a2a1e');
+      Px.circle(ctx, w/2, h*0.7, 3, '#4a3527');
+      // Corps de la lanterne en papier
+      Px.circle(ctx, w/2, h*0.42, w*0.3, '#c0392b');
+      Px.circle(ctx, w/2, h*0.42, w*0.22, '#e8703a');
+      Px.circle(ctx, w/2, h*0.4, w*0.12, '#ffb877');
+      // Bandeaux de bambou
+      Px.rect(ctx, w*0.2, h*0.34, w*0.6, 1, '#7a2015');
+      Px.rect(ctx, w*0.2, h*0.5, w*0.6, 1, '#7a2015');
     });
 
     add('cinemascreen9x5', 9, 5, (ctx: any, w: number, h: number) => {
@@ -317,16 +385,18 @@ class Assets {
       Px.rect(ctx, w*0.4, h*0.5, w*0.2, 2, '#555');
     });
 
-    add('whiteboard3x1', 3, 1, (ctx: any, w: number, h: number) => {
+    add('whiteboard8x3', 8, 3, (ctx: any, w: number, h: number) => {
       Px.rect(ctx, 2, 2, w - 4, h - 4, '#e0e0e0'); 
       Px.rect(ctx, 0, 0, w, 2, '#aaa'); 
       Px.rect(ctx, 0, h-2, w, 2, '#aaa'); 
       Px.rect(ctx, 0, 0, 2, h, '#aaa'); 
       Px.rect(ctx, w-2, 0, 2, h, '#aaa'); 
-      Px.rect(ctx, 10, 6, 6, 4, '#3b5998');
-      Px.rect(ctx, 22, 4, 6, 6, '#4caf50');
-      Px.rect(ctx, 34, 2, 6, 8, '#f44336');
-    }); add('plant1x1', 1, 1, (ctx: any, w: number, h: number) => {
+      // petits "marqueurs" effaçables
+      Px.rect(ctx, 10, h-4, 4, 2, '#333');
+      Px.rect(ctx, 16, h-4, 4, 2, '#f00');
+    });
+
+    add('plant1x1', 1, 1, (ctx: any, w: number, h: number) => {
       Px.rect(ctx, w * 0.3, h - 6, w * 0.4, 5, '#7a4a2e');
       Px.circle(ctx, w / 2, h * 0.45, w * 0.42, '#2f8f4e');
       Px.circle(ctx, w * 0.38, h * 0.32, w * 0.28, '#3fae63');
@@ -508,6 +578,16 @@ class Assets {
       }
     });
 
+    // Generate sit sprite
+    const { c: sitC, ctx: sitCtx } = Px.canvas(W, H);
+    base(sitCtx, 'down', 0); // draw upper body facing down
+    // Sitting legs (thighs straight, shoes forward)
+    Px.rect(sitCtx, 4, 18, 3, 2, PANTS);
+    Px.rect(sitCtx, 9, 18, 3, 2, PANTS);
+    Px.rect(sitCtx, 4, 20, 3, 2, '#111'); // Shoes
+    Px.rect(sitCtx, 9, 20, 3, 2, '#111'); // Shoes
+    sprites['sit'] = [sitC];
+
     return sprites;
   }
 }
@@ -582,6 +662,7 @@ class WorldMap {
   grid: number[][];
   furniture: any[];
   zones: any[];
+  whiteboardLines: any[] = [];
 
   constructor() {
     this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
@@ -597,7 +678,30 @@ class WorldMap {
       { name: 'Salle Gaming',      floorKey: 'gaming',     icon: '🎮', voiceChannelId: 'salon_id_serveurs', textChannelId: null, x1: 27, y1: 16, x2: 39, y2: 23, accent: '180,50,250' },
       { name: 'Salle Cinéma',      floorKey: 'cinema',     icon: '🍿', voiceChannelId: 'salon_id_cinema', textChannelId: null, x1: 40, y1: 1, x2: 53, y2: 23, accent: '255,50,50' },
     ];
-    this._generateLayout();
+    this._buildWalls();
+    this._generateDefaultFurniture();
+  }
+
+  syncCustomFurniture(furnitureList: any[]) {
+    this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    this._buildWalls();
+    this.furniture = [];
+    furnitureList.forEach(f => {
+      let type = f.type;
+      let c2 = f.c2;
+      if (type === 'whiteboard3x1' || type === 'whiteboard4x1' || type === 'whiteboard8x2') {
+        type = 'whiteboard8x3';
+        c2 = f.c1 + 7;
+        f.r2 = f.r1 + 2;
+      }
+      this._addFurniture(type, f.r1, f.c1, f.r2, c2);
+    });
+  }
+
+  getTileFromPx(px: number, py: number) {
+    const c = Math.floor(px / TILE);
+    const r = Math.floor(py / TILE);
+    return { r, c };
   }
 
   _setWall(r: number, c: number) { this.grid[r][c] = 1; }
@@ -614,10 +718,10 @@ class WorldMap {
 
   _addFurniture(type: string, r1: number, c1: number, r2: number, c2: number) {
     this._setSolid(r1, c1, r2, c2);
-    this.furniture.push({ type, r1, c1, r2, c2 });
+    this.furniture.push({ id: Math.random().toString(36).substring(2, 9), type, r1, c1, r2, c2 });
   }
 
-  _generateLayout() {
+  _buildWalls() {
     for (let c = 0; c < COLS; c++) { this._setWall(0, c); this._setWall(ROWS - 1, c); }
     for (let r = 0; r < ROWS; r++) { this._setWall(r, 0); this._setWall(r, COLS - 1); }
     this._hWall(10, [7, 20, 33]);
@@ -627,9 +731,11 @@ class WorldMap {
     this._vWallSeg(13, 16, 22, 18, 19);
     this._vWallSeg(26, 16, 22, 18, 19);
     this._vWallSeg(39, 1, 22, 11, 15);
+  }
 
+  _generateDefaultFurniture() {
     // Nouvelle salle de gauche : Open Space
-    this._addFurniture('whiteboard3x1', 1, 5, 1, 7);
+    this._addFurniture('whiteboard8x3', 1, 5, 3, 12);
     this._addFurniture('plant1x1', 1, 1, 1, 1);
     this._addFurniture('plant1x1', 1, 12, 1, 12);
     this._addFurniture('watercooler1x1', 8, 12, 8, 12);
@@ -648,36 +754,65 @@ class WorldMap {
     this._addFurniture('chair1x1', 8, 16, 8, 16);
     this._addFurniture('chair1x1', 8, 23, 8, 23);
     this._addFurniture('chair1x1', 8, 24, 8, 24);
-    // Studio de Musique (Plus pro et épuré, sans bloc serveur)
-    this._addFurniture('piano3x1', 2, 28, 2, 30); // Piano décalé à gauche
-    this._addFurniture('tv2x1', 2, 32, 2, 33); // Écran mural / monitoring
-    this._addFurniture('drumkit2x2', 2, 35, 3, 36); // Batterie à la place de la plante
+    // ---- Studio de Musique : scène sur le tapis, régie centrale, salon symétrique
+
+    // Scène (Le tapis est rendu centré en 29.5)
+    this._addFurniture('tv2x1', 1, 32, 1, 33);       // écran de monitoring centré
+    this._addFurniture('speaker1x1', 2, 28, 2, 28);  // enceinte façade gauche
+    this._addFurniture('piano3x1', 2, 29, 2, 31);    // piano (gauche)
+    this._addFurniture('drumkit2x2', 2, 32, 3, 33);  // batterie (centrée)
+    this._addFurniture('micstand1x1', 3, 34, 3, 34); // pied de micro (droite)
     
-    // Scène DJ & Son massive
-    this._addFurniture('speaker1x1', 5, 31, 5, 31); // Double enceinte gauche
-    this._addFurniture('speaker1x1', 6, 31, 6, 31); 
-    this._addFurniture('mixingdesk3x2', 6, 32, 7, 34); // Table de mixage centrée
-    this._addFurniture('speaker1x1', 5, 35, 5, 35); // Double enceinte droite
-    this._addFurniture('speaker1x1', 6, 35, 6, 35); 
+    // Mur d'amplis (pour balancer visuellement le piano)
+    this._addFurniture('speaker1x1', 2, 35, 2, 35);
+    this._addFurniture('speaker1x1', 3, 35, 3, 35);
+    this._addFurniture('speaker1x1', 2, 36, 2, 36);
+    this._addFurniture('speaker1x1', 3, 36, 3, 36);
+
+    this._addFurniture('speaker1x1', 2, 37, 2, 37);  // enceinte façade droite
+    this._addFurniture('chair1x1', 3, 30, 3, 30);    // tabouret du piano
+
+    // Régie / mixage, parfaitement centrée face à la scène
+    this._addFurniture('mixingdesk3x2', 6, 32, 7, 34);
+
+    // Salon d'écoute (symétrique sur la ligne du bas)
+    this._addFurniture('couch2x1', 9, 28, 9, 29);    // canapé gauche (à côté de la fontaine)
+    this._addFurniture('couch2x1', 9, 36, 9, 37);    // canapé droit (à côté du bonsaï)
     
-    // Espace écoute / détente
-    this._addFurniture('plant1x1', 8, 28, 8, 28);
-    this._addFurniture('couch2x1', 9, 29, 9, 30);
-    this._addFurniture('couch2x1', 9, 35, 9, 36);
-    this._addFurniture('watercooler1x1', 8, 38, 8, 38);
+    // Décorations dans les 4 coins
+    this._addFurniture('plant1x1', 1, 27, 1, 27);    // haut gauche
+    this._addFurniture('plant1x1', 1, 38, 1, 38);    // haut droite
+    this._addFurniture('watercooler1x1', 9, 27, 9, 27); // bas gauche
+    this._addFurniture('bonsai1x1', 9, 38, 9, 38);   // bas droite
+
+    // ---- Voyage (Japon) : genkan à l'entrée, allée centrale balisée par des
+    //      lanternes, coin thé (kotatsu) à gauche, coin nuit (futons) à droite.
+    //      La colonne 12 (lignes 17-20) reste libre : c'est le passage vers
+    //      la porte du Bureau du Manager (mur droit, colonne 13, lignes 18-19).
+
+    // Genkan (entrée), écrans coulissants en vis-à-vis du couloir
     this._addFurniture('shoji4x1', 16, 2, 16, 5);
     this._addFurniture('shoji4x1', 16, 8, 16, 11);
     this._addFurniture('bonsai1x1', 16, 1, 16, 1);
     this._addFurniture('bonsai1x1', 16, 12, 16, 12);
-    
-    // Coin Repas (En bas à gauche pour libérer les portes)
+
+    // Allée, balisée par deux lanternes en vis-à-vis de l'entrée
+    this._addFurniture('lantern1x1', 17, 5, 17, 5);
+    this._addFurniture('lantern1x1', 17, 8, 17, 8);
+
+    // Coin thé — kotatsu entouré de coussins sur ses quatre côtés
+    this._addFurniture('lantern1x1', 18, 3, 18, 3);
     this._addFurniture('kotatsu2x2', 20, 3, 21, 4);
     this._addFurniture('zabuton1x1', 19, 3, 19, 3);
     this._addFurniture('zabuton1x1', 19, 4, 19, 4);
+    this._addFurniture('zabuton1x1', 20, 2, 20, 2);
+    this._addFurniture('zabuton1x1', 21, 5, 21, 5);
     this._addFurniture('zabuton1x1', 22, 3, 22, 3);
     this._addFurniture('zabuton1x1', 22, 4, 22, 4);
-    
-    // Coin Nuit (En bas à droite)
+
+    // Coin nuit — futons avec lanterne et bonsaï de chevet
+    this._addFurniture('lantern1x1', 18, 10, 18, 10);
+    this._addFurniture('bonsai1x1', 18, 11, 18, 11);
     this._addFurniture('futon1x2', 21, 9, 22, 9);
     this._addFurniture('futon1x2', 21, 11, 22, 11);
     this._addFurniture('deskboss3x2', 18, 19, 19, 21); // Bureau centré face à la porte
@@ -761,7 +896,7 @@ class WorldMap {
       }
     }
 
-    const rugX = 30 * TILE - cam.x, rugY = 5 * TILE - cam.y;
+    const rugX = Math.round(29.5 * TILE) - cam.x, rugY = 2 * TILE - cam.y;
     if (rugX + assets.rug.width * SCALE > 0 && rugX < cam.viewW && rugY + assets.rug.height * SCALE > 0 && rugY < cam.viewH) {
       ctx.drawImage(assets.rug, 0, 0, assets.rug.width, assets.rug.height, rugX, rugY, assets.rug.width * SCALE, assets.rug.height * SCALE);
     }
@@ -786,19 +921,54 @@ class WorldMap {
 
       ctx.drawImage(sprite.canvas, 0, 0, sprite.canvas.width, sprite.canvas.height, sx, sy, w, h);
 
-      if (['desk2x2', 'deskboss3x2', 'gamingdesk2x2', 'arcade2x1', 'tv2x1'].includes(f.type)) {
+      if (f.type === 'whiteboard8x3' && this.whiteboardLines) {
+        ctx.save();
+        const scaleX = (w - 4) / 800;
+        const scaleY = (h - 4) / 450;
+        ctx.translate(sx + 2, sy + 2);
+        ctx.scale(scaleX, scaleY);
+        this.whiteboardLines.forEach(line => {
+          ctx.beginPath();
+          ctx.moveTo(line.startX, line.startY);
+          ctx.lineTo(line.endX, line.endY);
+          ctx.strokeStyle = line.color;
+          // Scale line width so it doesn't look too thick on the tiny board
+          ctx.lineWidth = line.width; 
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      if (['desk2x2', 'deskboss3x2', 'gamingdesk2x2', 'arcade2x1', 'tv2x1', 'mixingdesk3x2'].includes(f.type)) {
         const glow = 0.35 + Math.sin(time * 2 + f.c1) * 0.08;
         const gx = sx + w * 0.5, gy = sy + h * 0.5;
         const grad = ctx.createRadialGradient(gx, gy, 2, gx, gy, w * 0.8);
         const color = f.type === 'gamingdesk2x2' ? '200,50,255' : 
                       f.type === 'arcade2x1' ? '50,255,100' : 
-                      f.type === 'tv2x1' ? '100,100,255' : '120,190,255';
+                      f.type === 'tv2x1' ? '100,100,255' :
+                      f.type === 'mixingdesk3x2' ? '230,120,170' : '120,190,255';
         grad.addColorStop(0, `rgba(${color},${glow})`);
         grad.addColorStop(1, `rgba(${color},0)`);
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         ctx.fillStyle = grad;
         ctx.fillRect(sx - 10, sy - 10, w + 20, h + 20);
+        ctx.restore();
+      }
+
+      if (f.type === 'lantern1x1') {
+        // Scintillement chaleureux façon flamme (deux fréquences superposées, pas un pulse régulier)
+        const flicker = 0.4 + Math.sin(time * 5 + f.c1 * 3) * 0.08 + Math.sin(time * 11 + f.r1 * 2) * 0.05;
+        const gx = sx + w * 0.5, gy = sy + h * 0.42;
+        const grad = ctx.createRadialGradient(gx, gy, 1, gx, gy, w * 1.6);
+        grad.addColorStop(0, `rgba(255,170,90,${flicker})`);
+        grad.addColorStop(0.5, `rgba(255,120,60,${flicker * 0.35})`);
+        grad.addColorStop(1, 'rgba(255,120,60,0)');
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = grad;
+        ctx.fillRect(sx - w, sy - h, w * 3, h * 3);
         ctx.restore();
       }
 
@@ -838,9 +1008,19 @@ class Player {
   chatTimer: number = 0;
   skin: any = null;
   sprites: any = null;
+  isSitting: boolean = false;
+  jumpTime: number = 0;
+  jumpMaxTime: number = 0;
+  jumpStartX: number = 0;
+  jumpStartY: number = 0;
+  jumpEndX: number = 0;
+  jumpEndY: number = 0;
+  jumpAction: string | null = null;
   isDragged: boolean = false;
   isDraggingPending: boolean = false;
   wasPointerActive: boolean = false;
+  isSleeping: boolean = false;
+  particles: any[] = [];
   dragStartX: number = 0;
   dragStartY: number = 0;
   dragOffsetX: number = 0;
@@ -899,7 +1079,42 @@ class Player {
     return pts.some(([px, py]) => map.isSolid(px, py));
   }
 
-  update(dt: number, input: any, map: any, bus: any, _camera: any) {
+  update(dt: number, input: any, map: any, bus: any, _camera: any, isBuildMode: boolean = false) {
+    if (this.jumpTime > 0) {
+      this.jumpTime -= dt;
+      const t = 1 - Math.max(0, this.jumpTime / this.jumpMaxTime);
+      this.x = this.jumpStartX + (this.jumpEndX - this.jumpStartX) * t;
+      this.y = this.jumpStartY + (this.jumpEndY - this.jumpStartY) * t;
+      
+      const now = performance.now();
+      if (this.user && this.user.id !== 'spectator' && now - this.lastEmit > 50) {
+        this.socket?.emit('player_move_xy', {
+          userId: this.user.id, username: this.user.username, avatarUrl: this.user.avatarUrl, skin: this.skin,
+          x: this.x, y: this.y, dir: this.dir, frame: 0, isSitting: this.isSitting
+        });
+        this.lastEmit = now;
+      }
+      
+      if (this.jumpTime <= 0) {
+        this.jumpTime = 0;
+        if (this.jumpAction === 'sit' || this.jumpAction === 'sleep') {
+          this.isSitting = true;
+          this.isSleeping = this.jumpAction === 'sleep';
+          this.jumpAction = null;
+          
+          if (this.user && this.user.id !== 'spectator') {
+            this.socket?.emit('player_move_xy', {
+              userId: this.user.id, username: this.user.username, avatarUrl: this.user.avatarUrl, skin: this.skin,
+              x: this.x, y: this.y, dir: this.dir, frame: 0, isSitting: this.isSitting, isSleeping: this.isSleeping
+            });
+            this.lastEmit = performance.now();
+          }
+        }
+        try { localStorage.setItem('discord_user_pos', JSON.stringify({ x: this.centerX, y: this.centerY })); } catch(e) {}
+      }
+      return;
+    }
+
     let inputDx = 0, inputDy = 0;
     if (input.up) inputDy -= 1;
     if (input.down) inputDy += 1;
@@ -922,6 +1137,37 @@ class Player {
           this.dragStartY = this.y;
           this.dragPointerStartX = targetX;
           this.dragPointerStartY = targetY;
+        } else {
+          // Check for sitting interaction
+          const SCALE = 3; // hardcoded scale
+          const TILE = 16 * SCALE;
+          const tr = Math.floor(targetY / TILE);
+          const tc = Math.floor(targetX / TILE);
+          const sitables = ['couch2x1', 'chair1x1', 'gamingdesk2x2', 'deskboss3x2'];
+          const sleepables = ['futon1x2'];
+          const targetFurn = map.furniture.find((f: any) => 
+            (sitables.includes(f.type) || sleepables.includes(f.type)) && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
+          );
+          if (targetFurn && !this.isDraggingPending && !isBuildMode) {
+            const targetXPos = (targetFurn.c1 + (targetFurn.c2 - targetFurn.c1 + 1)/2) * TILE - this.hw / 2;
+            let targetYPos = (targetFurn.r1 + (targetFurn.r2 - targetFurn.r1 + 1)/2) * TILE - this.hh / 2;
+            if (sleepables.includes(targetFurn.type)) {
+              targetYPos += 14; // Décaler le corps vers le bas pour bien s'aligner avec l'oreiller
+            }
+            
+            this.jumpMaxTime = 0.25;
+            this.jumpTime = this.jumpMaxTime;
+            this.jumpStartX = this.x;
+            this.jumpStartY = this.y;
+            this.jumpEndX = targetXPos;
+            this.jumpEndY = targetYPos;
+            this.jumpAction = sleepables.includes(targetFurn.type) ? 'sleep' : 'sit';
+            
+            this.dir = this.jumpAction === 'sleep' ? 'up' : 'down';
+            this.vx = 0;
+            this.vy = 0;
+            this.moving = false;
+          }
         }
       }
 
@@ -947,7 +1193,7 @@ class Player {
         if (this.user && this.user.id !== 'spectator' && now - this.lastEmit > 50) {
           this.socket?.emit('player_move_xy', {
             userId: this.user.id, username: this.user.username, avatarUrl: this.user.avatarUrl, skin: this.skin,
-            x: this.x, y: this.y, dir: this.dir, frame: 0
+            x: this.x, y: this.y, dir: this.dir, frame: 0, isSitting: this.isSitting
           });
           this.lastEmit = now;
         }
@@ -968,6 +1214,22 @@ class Player {
     }
     
     if (p) this.wasPointerActive = p.active;
+
+    if (inputDx !== 0 || inputDy !== 0) {
+      if (this.isSitting) {
+        this.isSitting = false;
+        this.isSleeping = false;
+        
+        this.jumpMaxTime = 0.25; // 250ms de saut
+        this.jumpTime = this.jumpMaxTime;
+        this.jumpStartX = this.x;
+        this.jumpStartY = this.y;
+        this.jumpEndX = this.x;
+        this.jumpEndY = this.y + 16 * 3;
+        
+        return;
+      }
+    }
 
     if (inputDx !== 0 && inputDy !== 0) { 
       const length = Math.sqrt(inputDx * inputDx + inputDy * inputDy);
@@ -994,6 +1256,40 @@ class Player {
     if (Math.abs(this.vy) < 5) this.vy = 0;
 
     this.moving = this.vx !== 0 || this.vy !== 0;
+
+    if (this.moving && Math.random() < 0.25) {
+      this.particles.push({
+        type: 'dust',
+        x: this.x + this.hw / 2 + (Math.random() - 0.5) * 15,
+        y: this.y + this.hh,
+        vx: -this.vx * 0.15 + (Math.random() - 0.5) * 20,
+        vy: -this.vy * 0.15 + (Math.random() - 0.5) * 20,
+        life: 0.4,
+        maxLife: 0.4,
+        size: 2 + Math.random() * 3
+      });
+    }
+
+    if (this.isSleeping && Math.random() < 0.05) {
+      this.particles.push({
+        type: 'zzz',
+        x: this.x + this.hw / 2 + (Math.random() - 0.5) * 10,
+        y: this.y - 25,
+        vx: (Math.random() - 0.5) * 10,
+        vy: -10 - Math.random() * 10,
+        life: 1.5,
+        maxLife: 1.5,
+        size: 10 + Math.random() * 6
+      });
+    }
+
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
 
     if (inputDx > 0) this.dir = 'right';
     else if (inputDx < 0) this.dir = 'left';
@@ -1027,7 +1323,8 @@ class Player {
           x: this.x,
           y: this.y,
           dir: this.dir,
-          frame: this.frame
+          frame: this.frame,
+          isSitting: this.isSitting
         });
         this.lastEmit = now;
         try { localStorage.setItem('discord_user_pos', JSON.stringify({ x: this.centerX, y: this.centerY })); } catch(e) {}
@@ -1060,11 +1357,16 @@ class Player {
     }
 
     // Sinon, on se dessine normalement (comme un RemotePlayer mais local)
-    const frames = this.sprites[this.dir] || assets.player[this.dir];
-    const img = frames[this.frame];
+    const frames = this.isSitting ? this.sprites['sit'] : (this.sprites[this.dir] || assets.player[this.dir]);
+    const img = this.isSitting ? frames[0] : frames[this.frame];
     
     let bounce = 0;
-    if (this.isDragged) {
+    if (this.jumpTime > 0) {
+      const t = 1 - (this.jumpTime / this.jumpMaxTime);
+      bounce = Math.sin(t * Math.PI) * 24; // Arc parabolique vers le haut
+    } else if (this.isSitting) {
+      bounce = -16; // Abaisser le personnage pour qu'il soit posé sur l'assise
+    } else if (this.isDragged) {
       bounce = 12 + Math.sin(performance.now() / 100) * 3;
     } else if (this.moving) {
       bounce = Math.abs(Math.sin(this.animTime * Math.PI * 4)) * 3;
@@ -1076,6 +1378,26 @@ class Player {
     const spriteOffsetY = this.spriteH - this.hh;
     const sx = this.x - spriteOffsetX - cam.x;
     const sy = this.y - spriteOffsetY - cam.y - bounce;
+
+    ctx.save();
+    for (const p of this.particles) {
+      if (p.type === 'zzz') {
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.fillStyle = '#64b5f6'; // Bleu clair
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.font = `bold ${Math.floor(p.size)}px "Segoe UI", Arial, sans-serif`;
+        ctx.strokeText('Z', p.x - cam.x, p.y - cam.y);
+        ctx.fillText('Z', p.x - cam.x, p.y - cam.y);
+      } else {
+        ctx.globalAlpha = (p.life / p.maxLife) * 0.4;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x - cam.x, p.y - cam.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
 
     ctx.save();
     ctx.globalAlpha = 0.32;
@@ -1263,6 +1585,9 @@ class RemotePlayer {
   chatTimer: number = 0;
   skin: any = null;
   sprites: any = null;
+  isSitting: boolean = false;
+  isSleeping: boolean = false;
+  particles: any[] = [];
 
   constructor(id: string, x: number, y: number, username: string, avatarUrl: string, avatarDecorationUrl?: string, skin?: any) {
     this.id = id;
@@ -1326,17 +1651,53 @@ class RemotePlayer {
         this.chatMessage = null;
       }
     }
+    
+    if (this.moving && Math.random() < 0.25) {
+      this.particles.push({
+        type: 'dust',
+        x: this.x + this.hw / 2 + (Math.random() - 0.5) * 15,
+        y: this.y + this.hh,
+        vx: (Math.random() - 0.5) * 30,
+        vy: (Math.random() - 0.5) * 30,
+        life: 0.4,
+        maxLife: 0.4,
+        size: 2 + Math.random() * 3
+      });
+    }
+
+    if (this.isSleeping && Math.random() < 0.05) {
+      this.particles.push({
+        type: 'zzz',
+        x: this.x + this.hw / 2 + (Math.random() - 0.5) * 10,
+        y: this.y - 25,
+        vx: (Math.random() - 0.5) * 10,
+        vy: -10 - Math.random() * 10,
+        life: 1.5,
+        maxLife: 1.5,
+        size: 10 + Math.random() * 6
+      });
+    }
+
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
   }
 
   draw(ctx: CanvasRenderingContext2D, cam: any, assets: any) {
     if (!this.sprites) {
       this.sprites = assets.generatePlayerSprites(this.skin);
     }
-    const frames = this.sprites[this.dir] || assets.player[this.dir];
-    const img = frames[this.frame];
+    const frames = (this.isSitting && !this.isSleeping) ? this.sprites['sit'] : (this.sprites[this.dir] || assets.player[this.dir]);
+    const img = (this.isSitting && !this.isSleeping) ? frames[0] : frames[this.frame];
     
     let bounce = 0;
-    if (this.moving) {
+    if (this.isSitting) {
+      bounce = -16; // Abaisser le personnage pour qu'il soit posé sur l'assise
+    } else if (this.moving) {
       bounce = Math.abs(Math.sin(this.animTime * Math.PI * 4)) * 3;
     } else {
       bounce = Math.sin(performance.now() / 400) * 1.5;
@@ -1346,6 +1707,26 @@ class RemotePlayer {
     const spriteOffsetY = this.spriteH - this.hh;
     const sx = this.x - spriteOffsetX - cam.x;
     const sy = this.y - spriteOffsetY - cam.y - bounce;
+
+    ctx.save();
+    for (const p of this.particles) {
+      if (p.type === 'zzz') {
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.fillStyle = '#64b5f6'; // Bleu clair
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.font = `bold ${Math.floor(p.size)}px "Segoe UI", Arial, sans-serif`;
+        ctx.strokeText('Z', p.x - cam.x, p.y - cam.y);
+        ctx.fillText('Z', p.x - cam.x, p.y - cam.y);
+      } else {
+        ctx.globalAlpha = (p.life / p.maxLife) * 0.4;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x - cam.x, p.y - cam.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
 
     ctx.save();
     ctx.globalAlpha = 0.32;
@@ -1568,7 +1949,10 @@ export class OfficeGame {
   canvas: HTMLCanvasElement; viewW: number; viewH: number; ctx: CanvasRenderingContext2D;
   assets: Assets; input: InputManager; map: WorldMap; camera: Camera; hud: HUD; bus: EventBus;
   player: Player; vignette: any; remotePlayers: Map<string, RemotePlayer> = new Map();
-  lastTime: number; fpsAccum: number; fpsFrames: number; 
+  isBuildMode: boolean = false;
+  socket: any; lastTime: number = 0;
+  fpsAccum: number = 0;
+  fpsFrames: number = 0;
   running: boolean = true;
 
   constructor(canvas: HTMLCanvasElement, currentUser: any, socket: any, onRoomChange?: (zone: any) => void) {
@@ -1624,6 +2008,22 @@ export class OfficeGame {
 
       const allPlayers: any[] = [this.player, ...Array.from(this.remotePlayers.values())];
       allPlayers.sort((a, b) => (b.y + b.hh) - (a.y + a.hh));
+
+      const tc = Math.floor(clickX / 48);
+      const tr = Math.floor(clickY / 48);
+      const sitables = ['couch2x1', 'futon1x2', 'chair1x1', 'gamingdesk2x2', 'deskboss3x2'];
+      const clickedFurn = this.map.furniture.find((f: any) => 
+        sitables.includes(f.type) && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
+      );
+      if (clickedFurn) return; // Si on clique sur un siège, on ne déclenche pas le profil
+
+      const whiteboardClicked = this.map.furniture.find((f: any) =>
+        f.type === 'whiteboard8x3' && tr >= f.r1 && tr <= f.r2 && tc >= f.c1 && tc <= f.c2
+      );
+      if (whiteboardClicked) {
+        this.bus.emit('whiteboard_clicked');
+        return;
+      }
 
       for (const p of allPlayers) {
         const cx = p.x + p.hw / 2;
@@ -1770,7 +2170,7 @@ export class OfficeGame {
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
 
-    this.player.update(dt, this.input, this.map, this.bus, this.camera);
+    this.player.update(dt, this.input, this.map, this.bus, this.camera, this.isBuildMode);
     this.remotePlayers.forEach(rp => rp.update(dt));
     if (!this.player.isDragged) {
       this.camera.update(this.player.centerX, this.player.centerY, dt);

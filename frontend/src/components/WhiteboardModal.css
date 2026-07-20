@@ -1,0 +1,130 @@
+.whiteboard-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.whiteboard-modal {
+  background: #1e1e1e;
+  border-radius: 12px;
+  width: 900px;
+  max-width: 95vw;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.whiteboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #252525;
+  border-bottom: 1px solid #333;
+}
+
+.whiteboard-header h2 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.2rem;
+}
+
+.whiteboard-header .close-btn {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.whiteboard-header .close-btn:hover {
+  color: #fff;
+}
+
+.whiteboard-toolbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 20px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
+}
+
+.colors {
+  display: flex;
+  gap: 10px;
+}
+
+.color-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.color-btn:hover {
+  transform: scale(1.1);
+}
+
+.color-btn.active {
+  border-color: #fff;
+  transform: scale(1.1);
+}
+
+.tools {
+  display: flex;
+  gap: 10px;
+}
+
+.tool-btn, .clear-btn {
+  background: #333;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.tool-btn:hover, .clear-btn:hover {
+  background: #444;
+}
+
+.tool-btn.active {
+  background: #5865F2;
+  border-color: #5865F2;
+}
+
+.clear-btn {
+  background: #f44336;
+  border-color: #f44336;
+}
+
+.clear-btn:hover {
+  background: #d32f2f;
+}
+
+.whiteboard-canvas-container {
+  padding: 20px;
+  background: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.whiteboard-canvas-container canvas {
+  background: #ffffff;
+  border-radius: 8px;
+  cursor: crosshair;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}

@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 
@@ -36,6 +37,37 @@ let youtubeState = {
   playbackTime: 0,
   lastUpdateTimestamp: Date.now()
 };
+
+// Etat du tableau blanc
+let whiteboardLines: any[] = [];
+
+// ==========================================
+// CUSTOM FURNITURE STATE
+// ==========================================
+const FURNITURE_FILE = path.join(__dirname, '../../furniture.json');
+let customFurnitureState: { hasCustomLayout: boolean, furniture: any[] } = {
+  hasCustomLayout: false,
+  furniture: []
+};
+
+// Charger la sauvegarde des meubles s'il y en a une
+try {
+  if (fs.existsSync(FURNITURE_FILE)) {
+    const data = fs.readFileSync(FURNITURE_FILE, 'utf-8');
+    customFurnitureState = JSON.parse(data);
+    console.log('Meubles personnalisés chargés depuis le fichier.');
+  }
+} catch (err) {
+  console.error('Erreur lors du chargement des meubles:', err);
+}
+
+function saveCustomFurniture() {
+  try {
+    fs.writeFileSync(FURNITURE_FILE, JSON.stringify(customFurnitureState, null, 2));
+  } catch (err) {
+    console.error('Erreur lors de la sauvegarde des meubles:', err);
+  }
+}
 
 // ==========================================
 // OAUTH DISCORD
@@ -161,7 +193,9 @@ io.on('connection', (socket) => {
   // Envoi l'état initial
   socket.emit('initial_state', { 
     activeUsers: Array.from(activeUsers.values()),
-    youtubeState
+    youtubeState,
+    customFurnitureState,
+    whiteboardLines
   });
 
   // Événement pour le mouvement continu 60fps (X,Y)
@@ -211,6 +245,27 @@ io.on('connection', (socket) => {
     
     // On broadcast le nouvel état à tous les clients
     io.emit('YOUTUBE_STATE', youtubeState);
+  });
+
+  // Gestion du Mode Construction (Meubles)
+  socket.on('SYNC_FURNITURE', (data) => {
+    // data: { hasCustomLayout: boolean, furniture: any[] }
+    customFurnitureState = data;
+    saveCustomFurniture();
+    // On broadcast le nouvel état complet à tous les clients
+    io.emit('CUSTOM_FURNITURE_UPDATE', customFurnitureState);
+  });
+
+  // Gestion du Tableau Blanc
+  socket.on('WHITEBOARD_DRAW', (line) => {
+    whiteboardLines.push(line);
+    // On broadcast aux autres clients
+    socket.broadcast.emit('WHITEBOARD_DRAW', line);
+  });
+
+  socket.on('WHITEBOARD_CLEAR', () => {
+    whiteboardLines = [];
+    io.emit('WHITEBOARD_CLEAR');
   });
 
   // Mise à jour de la couleur/skin
