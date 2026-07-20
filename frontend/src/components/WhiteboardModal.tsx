@@ -147,10 +147,16 @@ export const WhiteboardModal: React.FC<WhiteboardModalProps> = ({ onClose, socke
         </div>
         <div className="whiteboard-toolbar">
           <div className="colors">
-            <button className={`color-btn ${color === '#000000' ? 'active' : ''}`} style={{backgroundColor: '#000'}} onClick={() => setColor('#000000')}></button>
+            <button className={`color-btn ${color === '#000000' ? 'active' : ''}`} style={{backgroundColor: '#000000'}} onClick={() => setColor('#000000')}></button>
             <button className={`color-btn ${color === '#f44336' ? 'active' : ''}`} style={{backgroundColor: '#f44336'}} onClick={() => setColor('#f44336')}></button>
             <button className={`color-btn ${color === '#2196f3' ? 'active' : ''}`} style={{backgroundColor: '#2196f3'}} onClick={() => setColor('#2196f3')}></button>
             <button className={`color-btn ${color === '#4caf50' ? 'active' : ''}`} style={{backgroundColor: '#4caf50'}} onClick={() => setColor('#4caf50')}></button>
+            <button className={`color-btn ${color === '#ffeb3b' ? 'active' : ''}`} style={{backgroundColor: '#ffeb3b'}} onClick={() => setColor('#ffeb3b')}></button>
+            <button className={`color-btn ${color === '#ff9800' ? 'active' : ''}`} style={{backgroundColor: '#ff9800'}} onClick={() => setColor('#ff9800')}></button>
+            <button className={`color-btn ${color === '#9c27b0' ? 'active' : ''}`} style={{backgroundColor: '#9c27b0'}} onClick={() => setColor('#9c27b0')}></button>
+            <button className={`color-btn ${color === '#e91e63' ? 'active' : ''}`} style={{backgroundColor: '#e91e63'}} onClick={() => setColor('#e91e63')}></button>
+            <button className={`color-btn ${color === '#795548' ? 'active' : ''}`} style={{backgroundColor: '#795548'}} onClick={() => setColor('#795548')}></button>
+            <button className={`color-btn ${color === '#00bcd4' ? 'active' : ''}`} style={{backgroundColor: '#00bcd4'}} onClick={() => setColor('#00bcd4')}></button>
           </div>
           <div className="tools">
             <button className={`tool-btn ${color === '#ffffff' ? 'active' : ''}`} onClick={() => { setColor('#ffffff'); setLineWidth(10); }}>Gomme</button>
