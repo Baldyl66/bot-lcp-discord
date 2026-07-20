@@ -29,7 +29,7 @@ export const LockerModal: React.FC<LockerModalProps> = ({ skin, setSkin, onSave,
           
           <div className="locker-option">
             <label>Modèle</label>
-            <select className="locker-select" value={skin.gender} onChange={(e) => setSkin({ ...skin, gender: e.target.value })}>
+            <select className="locker-select" value={skin.gender || 'male'} onChange={(e) => setSkin({ ...skin, gender: e.target.value })}>
               <option value="male">Masculin</option>
               <option value="female">Féminin</option>
             </select>
@@ -38,24 +38,24 @@ export const LockerModal: React.FC<LockerModalProps> = ({ skin, setSkin, onSave,
           <div className="locker-option">
             <label>Couleur Cheveux</label>
             <div className="locker-color-picker">
-              <input type="color" value={skin.hair} onChange={(e) => setSkin({ ...skin, hair: e.target.value })} />
-              <span className="locker-color-hex">{skin.hair.toUpperCase()}</span>
+              <input type="color" value={skin.hair || '#3a2a1e'} onChange={(e) => setSkin({ ...skin, hair: e.target.value })} />
+              <span className="locker-color-hex">{(skin.hair || '#3a2a1e').toUpperCase()}</span>
             </div>
           </div>
 
           <div className="locker-option">
             <label>Couleur Haut</label>
             <div className="locker-color-picker">
-              <input type="color" value={skin.shirt} onChange={(e) => setSkin({ ...skin, shirt: e.target.value })} />
-              <span className="locker-color-hex">{skin.shirt.toUpperCase()}</span>
+              <input type="color" value={skin.shirt || '#3aa0ff'} onChange={(e) => setSkin({ ...skin, shirt: e.target.value })} />
+              <span className="locker-color-hex">{(skin.shirt || '#3aa0ff').toUpperCase()}</span>
             </div>
           </div>
 
           <div className="locker-option">
             <label>Couleur Bas</label>
             <div className="locker-color-picker">
-              <input type="color" value={skin.pants} onChange={(e) => setSkin({ ...skin, pants: e.target.value })} />
-              <span className="locker-color-hex">{skin.pants.toUpperCase()}</span>
+              <input type="color" value={skin.pants || '#25324a'} onChange={(e) => setSkin({ ...skin, pants: e.target.value })} />
+              <span className="locker-color-hex">{(skin.pants || '#25324a').toUpperCase()}</span>
             </div>
           </div>
 
