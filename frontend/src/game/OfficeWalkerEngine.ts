@@ -1402,8 +1402,14 @@ class Player {
     }
 
     if (this.hasFusRoDah) {
-      if (input.keys[' ']) {
+      if (this.attackTime > 0) {
+        this.attackTime -= dt;
+        if (this.attackTime <= 0) this.isAttacking = false;
+      } else if (input.keys[' ']) {
         input.keys[' '] = false; // consume input
+        this.isAttacking = true;
+        this.attackTime = 0.25;
+        
         if (this.game && this.game.remotePlayers) {
           const attackRange = 80;
           const attackWidth = 60;
@@ -1564,6 +1570,28 @@ class Player {
       ctx.restore();
     } else {
       try { ctx.drawImage(img, 0, 0, img.width, img.height, sx, sy, this.spriteW, this.spriteH); } catch(e) { console.error('ERR', e, sx, sy, img); }
+    }
+
+    if (this.hasFusRoDah && this.isAttacking) {
+      ctx.save();
+      const footX = sx + this.spriteW / 2;
+      const footY = sy + this.spriteH - 10;
+      
+      let fx = footX, fy = footY;
+      const progress = 1 - (this.attackTime / 0.25);
+      const extend = Math.sin(progress * Math.PI) * 16;
+      
+      if (this.dir === 'down') { fy += extend; fx += 5; }
+      else if (this.dir === 'up') { fy -= extend; fx += 5; }
+      else if (this.dir === 'left') { fx -= extend; fy += 5; }
+      else if (this.dir === 'right') { fx += extend; fy += 5; }
+
+      // Draw boot
+      ctx.fillStyle = '#654321'; // Brown boot
+      ctx.fillRect(fx - 6, fy - 6, 12, 12);
+      ctx.fillStyle = '#3e2723';
+      ctx.fillRect(fx - 4, fy - 4, 8, 8);
+      ctx.restore();
     }
 
     if (this.hasWeapon) {
