@@ -901,7 +901,7 @@ export const MapComponent: React.FC = () => {
             onMouseOver={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)')}
             onMouseOut={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1)')}
           >
-            🖐️ Ranger {hasWeapon ? "l'Épée" : "les Bottes"}
+            Ranger {hasWeapon ? "l'Épée" : "les Bottes"}
           </button>
         )}
 
