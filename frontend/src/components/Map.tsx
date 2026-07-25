@@ -30,6 +30,7 @@ export const MapComponent: React.FC = () => {
   const [showCheatPanel, setShowCheatPanel] = useState(false);
   const [hasUnlockedCheat, setHasUnlockedCheat] = useState(false);
   const [hasWeapon, setHasWeapon] = useState(false);
+  const [hasFusRoDah, setHasFusRoDah] = useState(false);
 
   const [showWhiteboard, setShowWhiteboard] = useState(false);
   const [whiteboardLines, setWhiteboardLines] = useState<any[]>([]);
@@ -870,21 +871,25 @@ export const MapComponent: React.FC = () => {
               if (gameRef.current) {
                 gameRef.current.equipSword();
                 setHasWeapon(true);
+                setHasFusRoDah(false);
               }
             }}
             onEquipFusRoDah={() => {
               if (gameRef.current) {
                 gameRef.current.equipFusRoDah();
+                setHasFusRoDah(true);
+                setHasWeapon(false);
               }
             }}
           />
         )}
 
-        {hasWeapon && (
+        {(hasWeapon || hasFusRoDah) && (
           <button 
             onClick={() => {
               if (gameRef.current) gameRef.current.unequipSword();
               setHasWeapon(false);
+              setHasFusRoDah(false);
             }}
             style={{ 
               position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)', 
@@ -896,7 +901,7 @@ export const MapComponent: React.FC = () => {
             onMouseOver={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)')}
             onMouseOut={(e) => (e.currentTarget.style.transform = 'translateX(-50%) scale(1)')}
           >
-            🖐️ Ranger l'Épée
+            🖐️ Ranger {hasWeapon ? "l'Épée" : "les Bottes"}
           </button>
         )}
 
