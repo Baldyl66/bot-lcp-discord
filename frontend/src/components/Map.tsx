@@ -842,6 +842,11 @@ export const MapComponent: React.FC = () => {
                 setHasWeapon(true);
               }
             }}
+            onEquipFusRoDah={() => {
+              if (gameRef.current) {
+                gameRef.current.equipFusRoDah();
+              }
+            }}
           />
         )}
 

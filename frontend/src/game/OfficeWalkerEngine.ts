@@ -1092,6 +1092,9 @@ class Player {
   dragPointerStartX: number = 0;
   dragPointerStartY: number = 0;
 
+  hasFusRoDah: boolean = false;
+  stunTime: number = 0;
+
   constructor(x: number, y: number, user: any, socket: any) {
     this.hw = 28; this.hh = 18;
     this.x = x; this.y = y; 
@@ -1180,10 +1183,15 @@ class Player {
     }
 
     let inputDx = 0, inputDy = 0;
-    if (input.up) inputDy -= 1;
-    if (input.down) inputDy += 1;
-    if (input.left) inputDx -= 1;
-    if (input.right) inputDx += 1;
+    if (this.stunTime <= 0) {
+      if (input.up) inputDy -= 1;
+      if (input.down) inputDy += 1;
+      if (input.left) inputDx -= 1;
+      if (input.right) inputDx += 1;
+    } else {
+      this.stunTime -= dt;
+      if (this.stunTime < 0) this.stunTime = 0;
+    }
 
     const p = input.pointer;
     if (p && p.active && _camera) {
@@ -1389,6 +1397,45 @@ class Player {
               }
             }
           });
+        }
+      }
+    }
+
+    if (this.hasFusRoDah) {
+      if (input.keys[' ']) {
+        input.keys[' '] = false; // consume input
+        if (this.game && this.game.remotePlayers) {
+          const attackRange = 80;
+          const attackWidth = 60;
+          let hitBox = { x: 0, y: 0, w: 0, h: 0 };
+          if (this.dir === 'up') hitBox = { x: this.x - attackWidth/2, y: this.y - attackRange, w: attackWidth + this.hw, h: attackRange };
+          if (this.dir === 'down') hitBox = { x: this.x - attackWidth/2, y: this.y + this.hh, w: attackWidth + this.hw, h: attackRange };
+          if (this.dir === 'left') hitBox = { x: this.x - attackRange, y: this.y - attackWidth/2, w: attackRange, h: attackWidth + this.hh };
+          if (this.dir === 'right') hitBox = { x: this.x + this.hw, y: this.y - attackWidth/2, w: attackRange, h: attackWidth + this.hh };
+          
+          // Fus Ro Dah effect particles on self
+          for (let i = 0; i < 10; i++) {
+            this.particles.push({ 
+              type: 'dust', 
+              x: this.centerX + (Math.random() - 0.5) * 20, 
+              y: this.centerY + (Math.random() - 0.5) * 20, 
+              vx: (this.dir === 'right' ? 200 : this.dir === 'left' ? -200 : (Math.random() - 0.5) * 100), 
+              vy: (this.dir === 'down' ? 200 : this.dir === 'up' ? -200 : (Math.random() - 0.5) * 100), 
+              life: 0.3, maxLife: 0.3, size: 4 + Math.random() * 4 
+            });
+          }
+
+          let kickedSomeone = false;
+          this.game.remotePlayers.forEach((rp: any) => {
+            if (rp.x < hitBox.x + hitBox.w && rp.x + rp.hw > hitBox.x && rp.y < hitBox.y + hitBox.h && rp.y + rp.hh > hitBox.y) {
+              this.socket.emit('REQUEST_FUS_RO_DAH', { targetId: rp.id, dir: this.dir });
+              kickedSomeone = true;
+            }
+          });
+          
+          if (!kickedSomeone) {
+            this.bus.emit('chat', { user: 'Système', text: "*Fus Ro Dah dans le vide...*" });
+          }
         }
       }
     }
@@ -2167,16 +2214,26 @@ export class OfficeGame {
   equipSword() {
     if (this.player) {
       this.player.hasWeapon = true;
+      this.player.hasFusRoDah = false;
     }
     this.bus.emit('chat', { user: 'Système', text: "L'Épée d'Exil a été équipée ! \nEspace pour attaquer." });
+  }
+
+  equipFusRoDah() {
+    if (this.player) {
+      this.player.hasFusRoDah = true;
+      this.player.hasWeapon = false;
+    }
+    this.bus.emit('chat', { user: 'Système', text: "Bottes Fus Ro Dah équipées ! \nApproche-toi d'un collègue et appuie sur Espace." });
   }
 
   unequipSword() {
     if (this.player) {
       this.player.hasWeapon = false;
+      this.player.hasFusRoDah = false;
       this.player.isAttacking = false;
     }
-    this.bus.emit('chat', { user: 'Système', text: "L'Épée d'Exil a été rangée." });
+    this.bus.emit('chat', { user: 'Système', text: "Outil rangé." });
   }
 
   constructor(canvas: HTMLCanvasElement, currentUser: any, socket: any, onRoomChange?: (zone: any) => void) {

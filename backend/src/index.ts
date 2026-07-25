@@ -236,6 +236,11 @@ io.on('connection', (socket) => {
     io.emit('PUNISH_USER_DISCORD', data);
   });
 
+  socket.on('REQUEST_FUS_RO_DAH', (data) => {
+    console.log(`Le Web a lancé un Fus Ro Dah sur l'utilisateur ${data.targetId}`);
+    io.emit('FUS_RO_DAH_HIT', data);
+  });
+
   // Relais d'un message chat du Web vers le Bot
   socket.on('SEND_CHAT_MESSAGE', (data) => {
     console.log(`Le Web a envoyé un message texte pour ${data.channelId}: ${data.content}`);

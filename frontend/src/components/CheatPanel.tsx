@@ -4,6 +4,7 @@ import './CheatPanel.css';
 interface CheatPanelProps {
   onClose: () => void;
   onEquipSword: () => void;
+  onEquipFusRoDah: () => void;
   onUnequipSword?: () => void;
 }
 
@@ -23,6 +24,12 @@ export const CheatPanel: React.FC<CheatPanelProps> = ({ onClose, onEquipSword })
               onClose();
             }}>
               🗡️ Équiper l'Épée d'Exil
+            </button>
+            <button className="cheat-btn" onClick={() => {
+              onEquipFusRoDah();
+              onClose();
+            }}>
+              🏈 Équiper les Bottes Fus Ro Dah
             </button>
             <button className="cheat-btn disabled" disabled>
               💰 Mode Riche (Bientôt)
