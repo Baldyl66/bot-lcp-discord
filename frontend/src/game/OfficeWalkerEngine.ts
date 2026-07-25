@@ -1434,7 +1434,7 @@ class Player {
           });
           
           if (!kickedSomeone) {
-            this.bus.emit('chat', { user: 'Système', text: "*Fus Ro Dah dans le vide...*" });
+            bus.emit('chat', { user: 'Système', text: "*Fus Ro Dah dans le vide...*" });
           }
         }
       }
