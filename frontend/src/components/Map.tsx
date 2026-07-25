@@ -28,6 +28,7 @@ export const MapComponent: React.FC = () => {
   const ytPlayerRef = useRef<any>(null);
 
   const [showCheatPanel, setShowCheatPanel] = useState(false);
+  const [hasUnlockedCheat, setHasUnlockedCheat] = useState(false);
   const [hasWeapon, setHasWeapon] = useState(false);
 
   const [showWhiteboard, setShowWhiteboard] = useState(false);
@@ -274,6 +275,16 @@ export const MapComponent: React.FC = () => {
     window.location.href = '/api/auth/discord/login';
   };
 
+  useEffect(() => {
+    if (localStorage.getItem('unlocked_cheat') === 'true') {
+      setHasUnlockedCheat(true);
+    }
+  }, []);
+
+  const initDiscordAuth = async () => {
+    window.location.href = '/api/auth/discord/login';
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('discord_user');
     setUser(null);
@@ -514,6 +525,10 @@ export const MapComponent: React.FC = () => {
     if (chatMessage.trim().toLowerCase() === '/cheat') {
       setShowCheatPanel(true);
       setChatMessage("");
+      if (!hasUnlockedCheat) {
+        setHasUnlockedCheat(true);
+        localStorage.setItem('unlocked_cheat', 'true');
+      }
       return;
     }
 
@@ -625,6 +640,21 @@ export const MapComponent: React.FC = () => {
             >
               Déconnexion
             </button>
+            {hasUnlockedCheat && (
+              <button
+                onClick={() => setShowCheatPanel(true)}
+                style={{ 
+                  background: '#7289da', color: '#fff', border: 'none', 
+                  padding: '12px 20px', cursor: 'pointer', textAlign: 'center', 
+                  fontWeight: 'bold', borderTop: '1px solid #1e1f22',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#5b6eae'}
+                onMouseOut={(e) => e.currentTarget.style.background = '#7289da'}
+              >
+                Menu Triche
+              </button>
+            )}
           </div>
         </div>
       )}
