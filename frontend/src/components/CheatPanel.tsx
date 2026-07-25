@@ -13,7 +13,7 @@ export const CheatPanel: React.FC<CheatPanelProps> = ({ onClose, onEquipSword, o
     <div className="cheat-panel-overlay">
       <div className="cheat-panel">
         <div className="cheat-panel-header">
-          <h2>Panel de Triche Secret 😈</h2>
+          <h2>Panel de Triche Secret</h2>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="cheat-panel-content">
@@ -30,12 +30,6 @@ export const CheatPanel: React.FC<CheatPanelProps> = ({ onClose, onEquipSword, o
               onClose();
             }}>
               🏈 Équiper les Bottes Fus Ro Dah
-            </button>
-            <button className="cheat-btn disabled" disabled>
-              💰 Mode Riche (Bientôt)
-            </button>
-            <button className="cheat-btn disabled" disabled>
-              🚀 Vitesse x10 (Bientôt)
             </button>
           </div>
         </div>

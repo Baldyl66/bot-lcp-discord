@@ -19,19 +19,36 @@
 
 .cheat-panel-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 15px 20px;
   border-bottom: 1px solid #333;
   background: #2b2b36;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
+  position: relative;
 }
 
 .cheat-panel-header h2 {
   margin: 0;
   font-size: 1.2rem;
   color: #ff4757;
+}
+
+.cheat-panel-header .close-btn {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #b5bac1;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.cheat-panel-header .close-btn:hover {
+  color: white;
 }
 
 .cheat-panel-content {
