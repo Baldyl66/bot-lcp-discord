@@ -282,10 +282,6 @@ export const MapComponent: React.FC = () => {
     }
   }, []);
 
-  const initDiscordAuth = async () => {
-    window.location.href = '/api/auth/discord/login';
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('discord_user');
     setUser(null);
