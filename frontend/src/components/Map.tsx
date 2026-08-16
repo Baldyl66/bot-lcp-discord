@@ -273,7 +273,7 @@ export const MapComponent: React.FC = () => {
   }, []);
 
   const handleLogin = () => {
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
+    const BACKEND_URL = 'https://backend-production-d094.up.railway.app';
     window.location.href = `${BACKEND_URL}/api/auth/discord/login`;
   };
 
