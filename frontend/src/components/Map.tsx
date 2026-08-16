@@ -117,7 +117,7 @@ export const MapComponent: React.FC = () => {
     canvasRef.current.width = window.innerWidth;
     canvasRef.current.height = window.innerHeight;
 
-    const socket = io();
+    const socket = io('https://backend-production-d094.up.railway.app');
     socketRef.current = socket;
 
     // Instancie le moteur de jeu en lui passant le socket
