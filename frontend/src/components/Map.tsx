@@ -273,7 +273,8 @@ export const MapComponent: React.FC = () => {
   }, []);
 
   const handleLogin = () => {
-    window.location.href = '/api/auth/discord/login';
+    const BACKEND_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
+    window.location.href = `${BACKEND_URL}/api/auth/discord/login`;
   };
 
   useEffect(() => {
