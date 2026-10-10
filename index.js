@@ -124,7 +124,7 @@ client.on(Events.GuildMemberAdd, async member => {
     const username = member.user.username;
     const newNickname = `(LCP)-${username}`.slice(0, 32);
 
-    if (member.manageable) {
+    if (member.guild.id === '1385346339214462986' && member.manageable) {
       await member.setNickname(newNickname);
       console.log(`Pseudo modifié : ${member.user.tag} -> ${newNickname}`);
     }

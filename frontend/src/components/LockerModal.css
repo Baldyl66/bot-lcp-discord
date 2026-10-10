@@ -58,6 +58,7 @@
   letter-spacing: 2px;
   background: -webkit-linear-gradient(#fff, #aaa);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -103,6 +104,7 @@
 
 .locker-color-picker input[type="color"] {
   -webkit-appearance: none;
+  appearance: none;
   border: none;
   width: 30px;
   height: 30px;
